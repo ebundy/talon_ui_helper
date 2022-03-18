@@ -2,18 +2,15 @@
 Useful actions related to moving the mouse
 """
 
-import os
 import math
-import subprocess
+import os
 from typing import Union, Optional, List
 
-from talon import actions, ui, clip, screen, Module
-from talon.types import Rect as TalonRect
+from talon import actions, ui, screen, Module
 from talon.experimental import locate
+from talon.types import Rect as TalonRect
 
 from .blob_detector import calculate_blob_rects
-from .marker_ui import MarkerUi
-
 
 mod = Module()
 setting_template_directory = mod.setting(
@@ -129,7 +126,8 @@ class MouseActions:
         new_ypos = actions.mouse_y() + ydelta
         actions.mouse_move(new_xpos, new_ypos)
 
-    def mouse_helper_calculate_relative_rect(relative_rect_offsets: str, region:str ="active_screen") -> TalonRect:
+    def mouse_helper_calculate_relative_rect(relative_rect_offsets: str,
+                                             region: str = "active_screen") -> TalonRect:
         """
         Calculates a talon rectangle relative to the entire screen based on the given region
         of interest and a set of offsets. Examples:
@@ -166,10 +164,11 @@ class MouseActions:
         return rect
 
     def mouse_helper_find_template_relative(
-        template_path: str,
-        xoffset: float=0,
-        yoffset: float=0,
-        region: Optional[TalonRect]=None
+            template_path: str,
+            xoffset: float = 0,
+            yoffset: float = 0,
+            region: Optional[TalonRect] = None,
+            threshold: float = 0.800
     ) -> List[TalonRect]:
         """
         Finds all matches for the given image template within the given region.
@@ -212,7 +211,9 @@ class MouseActions:
             for match in locate.locate(
                 template_file,
                 rect=rect,
-                threshold=0.999
+                # threshold=0.900,
+                # threshold=0.800
+                threshold=threshold
             )
         ]
 
@@ -221,12 +222,31 @@ class MouseActions:
             key=lambda m: (m.x, m.y)
         )
 
+    def mouse_helper_move_images_relative(
+            template_path: str,
+            template_path_2: str,
+            disambiguator: Union[int, str] = 0,
+            xoffset: float = 0,
+            yoffset: float = 0,
+            region: Optional[TalonRect] = None
+    ):
+        """todo"""
+        try:
+            actions.user.mouse_helper_move_image_relative(template_path, disambiguator, xoffset,
+                                                          yoffset, region)
+        except RuntimeError as e:
+            # raise RuntimeError("No matches")
+            print('the first image recognition failed,we will try another one', e)
+            actions.user.mouse_helper_move_image_relative(template_path_2, disambiguator, xoffset,
+                                                          yoffset, region)
+        pass
+
     def mouse_helper_move_image_relative(
-        template_path: str,
-        disambiguator: Union[int, str]=0,
-        xoffset: float=0,
-        yoffset: float=0,
-        region: Optional[TalonRect]=None
+            template_path: str,
+            disambiguator: Union[int, str] = 0,
+            xoffset: float = 0,
+            yoffset: float = 0,
+            region: Optional[TalonRect] = None, threshold: float = 0.80
     ):
         """
         Moves the mouse relative to the template image given in template_path.
@@ -263,7 +283,8 @@ class MouseActions:
             template_path,
             xoffset,
             yoffset,
-            rect
+            rect,
+            threshold=threshold,
         )
 
         if len(sorted_matches) == 0:
@@ -298,7 +319,7 @@ class MouseActions:
             math.ceil(match_rect.y + (match_rect.height / 2)),
         )
 
-    def mouse_helper_blob_picker(bounding_rectangle: TalonRect, min_gap_size: int=5):
+    def mouse_helper_blob_picker(bounding_rectangle: TalonRect, min_gap_size: int = 5):
         """
         Attempts to find clickable elements within the given bounding rectangle, then
         draws a labelled overlay allowing you to click or move the mouse to them.
@@ -313,3 +334,17 @@ class MouseActions:
             return
 
         actions.user.marker_ui_show(rects)
+
+    def click_to_that_image_and_comeback(template_path: str,
+                                         disambiguator: Union[int, str] = 0,
+                                         xoffset: float = 0,
+                                         yoffset: float = 0,
+                                         region: Optional[TalonRect] = None,
+                                         threshold: float = 0.80):
+        """todo"""
+        actions.user.mouse_helper_position_save()
+        actions.user.mouse_helper_move_image_relative(template_path, disambiguator)
+        actions.sleep(0.5)
+        actions.mouse_click(0)
+        actions.sleep(0.05)
+        actions.user.mouse_helper_position_restore()

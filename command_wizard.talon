@@ -1,1 +1,2 @@
-command wizard show: user.command_wizard_show()
+wizard : user.command_wizard_show()
+#wizard one : user.command_wizard_show()

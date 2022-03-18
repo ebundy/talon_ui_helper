@@ -2,14 +2,13 @@
 Actions related to building voice commands.
 """
 
-import os
 import datetime
+import os
 
 from talon import Module, Context, actions, ui, imgui
 
-from .overlays import ImageSelectorOverlay, BlobBoxOverlay
 from .mouse_helper import get_image_template_directory
-
+from .overlays import ImageSelectorOverlay, BlobBoxOverlay
 
 mod = Module()
 mod.tag("command_wizard_showing", desc="The command wizard is showing")
@@ -52,8 +51,6 @@ def handle_image_click_builder(result):
         offset_bit = ", ".join([""] + list(map(lambda x: str(int(x)), result["offset"])))
 
     command = "\n".join([
-        "",
-        ":",
         "    user.mouse_helper_position_save()",
         f'    user.mouse_helper_move_image_relative("{filename}", {index}{offset_bit})',
         "    sleep(0.05)",
@@ -96,6 +93,7 @@ def handle_blob_detect_builder(result):
         return
 
     active_rectangle = active_rectangle_before_overlay
+
     def calculate_offset(position, minimum, width):
         # Split each axis into two to determine which side of the screen
         # the coordinate is offset from
@@ -192,7 +190,7 @@ def builder_picker(gui: imgui.GUI):
 
     for i, (text, _, _, _) in enumerate(command_wizards):
         gui.text(text)
-        if gui.button(f"Choose {i+1}"):
+        if gui.button(f"Choose {i + 1}"):
             open_overlay(i)
         gui.spacer()
 

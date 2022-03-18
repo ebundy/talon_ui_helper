@@ -1,4 +1,5 @@
-tag: user.command_wizard_showing
+#tag: user.command_wizard_showing
 -
-choose <number_small>: user.command_wizard_choose_option(number_small)
+wizard <number_small>: user.command_wizard_choose_option(number_small)
+wiscreen: user.command_wizard_choose_option(1)
 command wizard hide: user.command_wizard_hide()
