@@ -241,6 +241,15 @@ class MouseActions:
                                                           yoffset, region)
         pass
 
+    def mouse_helper_move_image_relative_threshold(
+            template_path: str,
+            disambiguator: Union[int, str] = 0,
+            threshold: float = 0.80
+    ):
+        """todo"""
+        actions.user.mouse_helper_move_image_relative(template_path, disambiguator, 0, 0, None,
+                                                      threshold)
+
     def mouse_helper_move_image_relative(
             template_path: str,
             disambiguator: Union[int, str] = 0,
@@ -248,7 +257,8 @@ class MouseActions:
             yoffset: float = 0,
             region: Optional[TalonRect] = None, threshold: float = 0.80
     ):
-        """
+
+        """' 
         Moves the mouse relative to the template image given in template_path.
 
         :param template_path: Filename of the image to find. Can be an absolute path or
@@ -270,6 +280,9 @@ class MouseActions:
             TalonRect (see mouse_helper_calculate_relative_rect) or None to just use the
             active screen.
         """
+
+        print(
+            f'mouse_helper_move_image_relative() with template_path={template_path}, disambiguator={disambiguator}, xoffset={xoffset}, yoffset={yoffset}, region={region}, threshold={threshold}')
 
         if region is None:
             rect = actions.user.mouse_helper_calculate_relative_rect(
@@ -335,16 +348,56 @@ class MouseActions:
 
         actions.user.marker_ui_show(rects)
 
+    def click_to_that_image(template_path: str,
+                            disambiguator: Union[int, str] = 0,
+                            threshold: float = 0.80):
+        """todo"""
+        actions.user.mouse_helper_move_image_relative_threshold(template_path, disambiguator,
+                                                                threshold)
+        actions.sleep(0.5)
+        actions.mouse_click(0)
+
     def click_to_that_image_and_comeback(template_path: str,
                                          disambiguator: Union[int, str] = 0,
-                                         xoffset: float = 0,
-                                         yoffset: float = 0,
-                                         region: Optional[TalonRect] = None,
                                          threshold: float = 0.80):
         """todo"""
         actions.user.mouse_helper_position_save()
-        actions.user.mouse_helper_move_image_relative(template_path, disambiguator)
+        actions.user.mouse_helper_move_image_relative_threshold(template_path, disambiguator,
+                                                                threshold)
+
         actions.sleep(0.5)
         actions.mouse_click(0)
         actions.sleep(0.05)
         actions.user.mouse_helper_position_restore()
+
+    def click_to_that_images_and_comeback(template_path_one: str, template_path_two: str,
+                                          disambiguator: Union[int, str] = 0,
+                                          threshold: float = 0.80):
+        """todo"""
+        actions.user.mouse_helper_position_save()
+
+        actions.user.mouse_helper_move_images_relative(template_path_one, template_path_two,
+                                                       disambiguator,
+                                                       threshold)
+
+        actions.sleep(0.5)
+        actions.mouse_click(0)
+        actions.sleep(0.05)
+        actions.user.mouse_helper_position_restore()
+
+    def click_to_that_images(template_path_one: str, template_path_two: str,
+                             disambiguator: Union[int, str] = 0,
+                             threshold: float = 0.80):
+        """todo"""
+        actions.user.mouse_helper_move_images_relative(template_path_one, template_path_two,
+                                                       disambiguator,
+                                                       threshold)
+        actions.sleep(0.5)
+        actions.mouse_click(0)
+
+# template_path: str,
+# template_path_2: str,
+# disambiguator: Union[int, str] = 0,
+# xoffset: float = 0,
+# yoffset: float = 0,
+# region: Optional[TalonRect] = None

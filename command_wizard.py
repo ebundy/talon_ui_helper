@@ -51,13 +51,9 @@ def handle_image_click_builder(result):
         offset_bit = ", ".join([""] + list(map(lambda x: str(int(x)), result["offset"])))
 
     command = "\n".join([
-        "    user.mouse_helper_position_save()",
-        f'    user.mouse_helper_move_image_relative("{filename}", {index}{offset_bit})',
-        "    sleep(0.05)",
-        "    mouse_click(0)",
-        "    sleep(0.05)",
-        "    user.mouse_helper_position_restore()",
+        f'  user.click_to_that_image_and_comeback("{filename}", 0, 0.8)',
     ])
+    print('hander')
     actions.clip.set_text(command)
     actions.app.notify("Copied new command to clipboard")
 
