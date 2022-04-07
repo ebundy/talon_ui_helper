@@ -14,13 +14,24 @@ from .blob_detector import calculate_blob_rects
 
 mod = Module()
 setting_template_directory = mod.setting(
-    "mouse_helper_template_directory",
-    type=str,
-    desc=(
-        "The folder that templated images are saved to."
-        " Defaults to image_templates in your user folder"
-    ),
-    default=None
+        "mouse_helper_template_directory",
+        type=str,
+        desc=(
+                "The folder that templated images are saved to."
+                " Defaults to image_templates in your user folder"
+        ),
+        default=None
+        # default=None
+)
+setting_template_sub_directory = mod.setting(
+        "mouse_helper_template_sub_directory",
+        type=str,
+        desc=(
+                "The folder that templated images are saved to."
+                " Defaults to image_templates in your user folder"
+        ),
+        default='pole-emploi'
+        # default=None
 )
 
 
@@ -34,8 +45,8 @@ def get_image_template_directory():
         return maybe_value
     else:
         return os.path.join(
-            os.path.dirname(os.path.realpath(__file__)),
-            "../image_templates"
+                os.path.dirname(os.path.realpath(__file__)),
+                ".." + os.sep + "image_templates"
         )
 
 
@@ -101,8 +112,8 @@ class MouseActions:
             return
 
         actions.mouse_move(
-            saved_mouse_pos[0],
-            saved_mouse_pos[1]
+                saved_mouse_pos[0],
+                saved_mouse_pos[1]
         )
 
     def mouse_helper_move_active_window_relative(xpos: str, ypos: str):
@@ -113,8 +124,8 @@ class MouseActions:
         rect = find_active_window_rect()
 
         actions.mouse_move(
-            calculate_relative(xpos, 0, rect.width) + rect.x,
-            calculate_relative(ypos, 0, rect.height) + rect.y,
+                calculate_relative(xpos, 0, rect.width) + rect.x,
+                calculate_relative(ypos, 0, rect.height) + rect.y,
         )
 
     def mouse_helper_move_relative(xdelta: float, ydelta: float):
@@ -155,10 +166,10 @@ class MouseActions:
         x = _calc_pos(mods[0], base_rect.x, base_rect.x + base_rect.width)
         y = _calc_pos(mods[1], base_rect.y, base_rect.y + base_rect.height)
         rect = TalonRect(
-            x,
-            y,
-            _calc_pos(mods[2], base_rect.x, base_rect.x + base_rect.width) - x,
-            _calc_pos(mods[3], base_rect.y, base_rect.y + base_rect.height) - y,
+                x,
+                y,
+                _calc_pos(mods[2], base_rect.x, base_rect.x + base_rect.width) - x,
+                _calc_pos(mods[3], base_rect.y, base_rect.y + base_rect.height) - y,
         )
 
         return rect
@@ -187,8 +198,8 @@ class MouseActions:
 
         if region is None:
             rect = actions.user.mouse_helper_calculate_relative_rect(
-                "0 0 -0 -0",
-                "active_screen"
+                    "0 0 -0 -0",
+                    "active_screen"
             )
         else:
             rect = region
@@ -201,26 +212,23 @@ class MouseActions:
             template_file = os.path.join(get_image_template_directory(), template_path)
 
         matches = [
-            TalonRect(
-                match.x + xoffset,
-                match.y + yoffset,
-                match.width,
-                match.height
-            )
+                TalonRect(
+                        match.x + xoffset,
+                        match.y + yoffset,
+                        match.width,
+                        match.height
+                )
 
-            for match in locate.locate(
-                template_file,
-                rect=rect,
-                # threshold=0.900,
-                # threshold=0.800
-                threshold=threshold
-            )
+                for match in locate.locate(
+                        template_file,
+                        rect=rect,
+                        # threshold=0.900,
+                        # threshold=0.800
+                        threshold=threshold
+                )
         ]
 
-        return sorted(
-            matches,
-            key=lambda m: (m.x, m.y)
-        )
+        return matches
 
     def mouse_helper_move_images_relative(
             template_path: str,
@@ -282,27 +290,35 @@ class MouseActions:
         """
 
         print(
-            f'mouse_helper_move_image_relative() with template_path={template_path}, disambiguator={disambiguator}, xoffset={xoffset}, yoffset={yoffset}, region={region}, threshold={threshold}')
+                f'mouse_helper_move_image_relative() with template_path={template_path}, disambiguator={disambiguator}, xoffset={xoffset}, yoffset={yoffset}, region={region}, threshold={threshold}')
 
         if region is None:
             rect = actions.user.mouse_helper_calculate_relative_rect(
-                "0 0 -0 -0",
-                "active_screen"
+                    "0 0 -0 -0",
+                    "active_screen"
             )
         else:
             rect = region
 
         sorted_matches = actions.user.mouse_helper_find_template_relative(
-            template_path,
-            xoffset,
-            yoffset,
-            rect,
-            threshold=threshold,
+                template_path,
+                xoffset,
+                yoffset,
+                rect,
+                threshold=threshold,
         )
+        if disambiguator != 0:
+            sorted_matches = sorted(
+                    sorted_matches,
+                    key=lambda m: (m.x, m.y)
+            )
+            print(f'sorted_matches by position={sorted_matches}')
+        else:
+            print(f'sorted_matches by best matching={sorted_matches}')
 
         if len(sorted_matches) == 0:
             # Throw an exception to cancel any following commands in the .talon file
-            raise RuntimeError("No matches")
+            raise RuntimeError(f"No matches for image {template_path}")
 
         if disambiguator in ("mouse", "mouse_cycle"):
             # math.ceil is needed here to ensure we only look at pixels after the current template match if we're
@@ -310,9 +326,9 @@ class MouseActions:
             xnorm = math.ceil(actions.mouse_x() - sorted_matches[0].width / 2)
             ynorm = math.ceil(actions.mouse_y() - sorted_matches[0].height / 2)
             filtered_matches = [
-                match
-                for match in sorted_matches
-                if (match.y == ynorm and match.x > xnorm) or match.y > ynorm
+                    match
+                    for match in sorted_matches
+                    if (match.y == ynorm and match.x > xnorm) or match.y > ynorm
             ]
 
             if len(filtered_matches) > 0:
@@ -328,8 +344,8 @@ class MouseActions:
             match_rect = sorted_matches[disambiguator]
 
         actions.mouse_move(
-            math.ceil(match_rect.x + (match_rect.width / 2)),
-            math.ceil(match_rect.y + (match_rect.height / 2)),
+                math.ceil(match_rect.x + (match_rect.width / 2)),
+                math.ceil(match_rect.y + (match_rect.height / 2)),
         )
 
     def mouse_helper_blob_picker(bounding_rectangle: TalonRect, min_gap_size: int = 5):
