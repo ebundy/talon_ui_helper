@@ -1,19 +1,16 @@
 import abc
-import numpy as np
 import threading
-import datetime
 from typing import Optional
 
-from talon import Module, actions, ui, imgui, canvas, screen, cron
-
+import numpy as np
+from talon import Module, ui, canvas, screen, cron
+from talon.experimental import locate
 from talon.skia import image, rrect, paint
 from talon.types import Rect as TalonRect
-from talon.experimental import locate
 
-from .ui_widgets import layout_text, render_text
-from .marker_ui import MarkerUi
 from .blob_detector import calculate_blob_rects
-
+from .marker_ui import MarkerUi
+from .ui_widgets import layout_text, render_text
 
 mod = Module()
 
@@ -70,8 +67,8 @@ class ScreenshotOverlay(abc.ABC):
 
     def _get_keyboard_commands(self):
         return [
-            ("escape", "Close overlay"),
-            ("enter", "Confirm selection and close overlay"),
+                ("escape", "Close overlay"),
+                ("enter", "Confirm selection and close overlay"),
         ]
 
     def _calculate_result(self):
@@ -96,8 +93,8 @@ class ScreenshotOverlay(abc.ABC):
         all_text = self.text or ""
         all_text += "\n\nKeyboard shortcuts (or use equivalent voice command):\n"
         all_text += "\n".join([
-            f" - {key}: {description}"
-            for key, description in self._get_keyboard_commands()
+                f" - {key}: {description}"
+                for key, description in self._get_keyboard_commands()
         ])
 
         canvas.paint = paint.Paint()
@@ -114,10 +111,10 @@ class ScreenshotOverlay(abc.ABC):
         canvas.paint.color = "000000ff"
         canvas.paint.style = canvas.paint.Style.FILL
         thing = rrect.RoundRect.from_rect(
-            self.text_rect,
-            x=10,
-            y=10,
-            radii=(10, 10)
+                self.text_rect,
+                x=10,
+                y=10,
+                radii=(10, 10)
         )
         canvas.draw_rrect(thing)
 
@@ -139,10 +136,10 @@ class ScreenshotOverlay(abc.ABC):
         canvas.paint.color = "660000ff"
         canvas.paint.style = canvas.paint.Style.FILL
         thing = rrect.RoundRect.from_rect(
-            text_rect,
-            x=10,
-            y=10,
-            radii=(10, 10)
+                text_rect,
+                x=10,
+                y=10,
+                radii=(10, 10)
         )
         canvas.draw_rrect(thing)
 
@@ -150,9 +147,11 @@ class ScreenshotOverlay(abc.ABC):
 
     def _show_flash(self, text):
         self.flash_text = text
+
         def clear_flash():
             self.flash_text = None
             self.can.freeze()
+
         cron.after("2s", clear_flash)
 
     def _focus_event(self, focussed):
@@ -197,10 +196,10 @@ class BoxSelectorOverlay(ScreenshotOverlay):
     def _get_keyboard_commands(self):
         commands = super()._get_keyboard_commands()
         commands += [
-            ("up/down/left/right", "Nudge selection in indicated direction"),
-            ("shift + up/down/left/right", "Nudge selection a larger amount"),
-            ("ctrl + up/down/left/right", "Shrink/grow selection"),
-            ("shift + ctrl + up/down/left/right", "Shrink/grow selection a larger amount"),
+                ("up/down/left/right", "Nudge selection in indicated direction"),
+                ("shift + up/down/left/right", "Nudge selection a larger amount"),
+                ("ctrl + up/down/left/right", "Shrink/grow selection"),
+                ("shift + ctrl + up/down/left/right", "Shrink/grow selection a larger amount"),
         ]
         return commands
 
@@ -235,10 +234,10 @@ class BoxSelectorOverlay(ScreenshotOverlay):
             height = self.hl_region.height
 
         return TalonRect(
-            x,
-            y,
-            width,
-            height
+                x,
+                y,
+                width,
+                height
         )
 
     def _draw_widgets(self, canvas):
@@ -256,10 +255,10 @@ class BoxSelectorOverlay(ScreenshotOverlay):
         if self.hl_region.width == 0 or self.hl_region.height == 0:
             # Deal with the zero thickness cases that happen when using voice commands
             canvas.draw_line(
-                self.hl_region.x,
-                self.hl_region.y,
-                self.hl_region.x + self.hl_region.width,
-                self.hl_region.y + self.hl_region.height
+                    self.hl_region.x,
+                    self.hl_region.y,
+                    self.hl_region.x + self.hl_region.width,
+                    self.hl_region.y + self.hl_region.height
             )
         else:
             canvas.draw_rect(self.hl_region)
@@ -267,8 +266,8 @@ class BoxSelectorOverlay(ScreenshotOverlay):
     def _get_region_centre(self):
         if self.hl_region:
             return (
-                self.hl_region.x + self.hl_region.width / 2,
-                self.hl_region.y + self.hl_region.height / 2
+                    self.hl_region.x + self.hl_region.width / 2,
+                    self.hl_region.y + self.hl_region.height / 2
             )
         else:
             return None
@@ -282,9 +281,9 @@ class BoxSelectorOverlay(ScreenshotOverlay):
         xpos = region.x - self.offsetx
         ypos = region.y - self.offsety
         arr = np.array(self.image)[
-            ypos:(ypos + region.height),
-            xpos:(xpos + region.width),
-        ]
+              ypos:(ypos + region.height),
+              xpos:(xpos + region.width),
+              ]
         if len(arr) == 0:
             return None
 
@@ -300,10 +299,10 @@ class BoxSelectorOverlay(ScreenshotOverlay):
             self.can.freeze()
         elif evt.event == "mousemove" and self.is_selecting and self.hl_region:
             self.hl_region = TalonRect(
-                self.hl_region.x,
-                self.hl_region.y,
-                evt.gpos.x - self.hl_region.x,
-                evt.gpos.y - self.hl_region.y
+                    self.hl_region.x,
+                    self.hl_region.y,
+                    evt.gpos.x - self.hl_region.x,
+                    evt.gpos.y - self.hl_region.y
             )
             self.can.freeze()
         elif evt.event == "mouseup" and evt.button == 0:
@@ -318,10 +317,10 @@ class BoxSelectorOverlay(ScreenshotOverlay):
             return
 
         keymap = [
-            ("left", ["x", "width", "-"]),
-            ("right", ["x", "width", "+"]),
-            ("up", ["y", "height", "-"]),
-            ("down", ["y", "height", "+"]),
+                ("left", ["x", "width", "-"]),
+                ("right", ["x", "width", "+"]),
+                ("up", ["y", "height", "-"]),
+                ("down", ["y", "height", "+"]),
         ]
 
         for key, args in keymap:
@@ -356,9 +355,9 @@ class BoxSelectorOverlay(ScreenshotOverlay):
 
                 if curr_extent > max_pos:
                     setattr(
-                        self.hl_region,
-                        scale,
-                        max_pos - getattr(self.hl_region, position)
+                            self.hl_region,
+                            scale,
+                            max_pos - getattr(self.hl_region, position)
                     )
 
             # Start the selection settled countdown timer
@@ -381,6 +380,7 @@ class ImageSelectorOverlay(BoxSelectorOverlay):
     """
     Allows the user to select a region on the screen to use as an image for the locator API.
     """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.offset_coord = None
@@ -391,8 +391,8 @@ class ImageSelectorOverlay(BoxSelectorOverlay):
             if self.offset_coord is not None:
                 cx, cy = self._get_region_centre()
                 offset = (
-                    self.offset_coord.x - cx,
-                    self.offset_coord.y - cy
+                        self.offset_coord.x - cx,
+                        self.offset_coord.y - cy
                 )
             else:
                 offset = None
@@ -403,9 +403,9 @@ class ImageSelectorOverlay(BoxSelectorOverlay):
                     index = i
 
             return {
-                "image": self._get_cropped_image(),
-                "offset": offset,
-                "index": index
+                    "image": self._get_cropped_image(),
+                    "offset": offset,
+                    "index": index
             }
         else:
             return None
@@ -422,7 +422,7 @@ class ImageSelectorOverlay(BoxSelectorOverlay):
 
         if timed_out or len(self.result_rects) > 20:
             self._show_flash(
-                "Too many matches, not showing any of them"
+                    "Too many matches, not showing any of them"
             )
             self.result_rects = []
 
@@ -444,23 +444,23 @@ class ImageSelectorOverlay(BoxSelectorOverlay):
         canvas.paint.stroke_width = 1
         if self.offset_coord is None:
             args = [
-                self.hl_region.x + self.hl_region.width / 2,
-                self.hl_region.y + self.hl_region.height / 2
+                    self.hl_region.x + self.hl_region.width / 2,
+                    self.hl_region.y + self.hl_region.height / 2
             ]
         else:
             args = [
-                self.offset_coord.x,
-                self.offset_coord.y
+                    self.offset_coord.x,
+                    self.offset_coord.y
             ]
             canvas.paint.antialias = True
             canvas.draw_line(
-                *self._get_region_centre(),
-                *args
+                    *self._get_region_centre(),
+                    *args
             )
 
         canvas.draw_circle(
-            *args,
-            2
+                *args,
+                2
         )
 
     def _find_matches(self):
@@ -470,18 +470,18 @@ class ImageSelectorOverlay(BoxSelectorOverlay):
             return
 
         self.result_rects = locate.locate_in_image(
-            self.image,
-            cropped_img,
-            threshold=0.999
+                self.image,
+                cropped_img,
+                threshold=0.999
         )
         self.result_rects = [
-            TalonRect(
-                rect.x + self.offsetx,
-                rect.y + self.offsety,
-                rect.width,
-                rect.height
-            )
-            for rect in self.result_rects
+                TalonRect(
+                        rect.x + self.offsetx,
+                        rect.y + self.offsety,
+                        rect.width,
+                        rect.height
+                )
+                for rect in self.result_rects
         ]
 
     def _draw_matches(self, canvas):
@@ -530,11 +530,11 @@ class BlobBoxOverlay(BoxSelectorOverlay):
         rects = calculate_blob_rects(img, region)
 
         self.markers = [
-            MarkerUi.Marker(
-                rect,
-                label
-            )
-            for rect, label in zip(rects, "abcdefghijklmnopqrstuvwxyz0123456789"*3)
+                MarkerUi.Marker(
+                        rect,
+                        label
+                )
+                for rect, label in zip(rects, "abcdefghijklmnopqrstuvwxyz0123456789" * 3)
         ]
         self.can.freeze()
 

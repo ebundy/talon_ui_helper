@@ -7,7 +7,8 @@ import os
 
 from talon import Module, Context, actions, ui, imgui
 
-from .mouse_helper import get_image_template_directory
+# from mouse_helper import *
+from .mouse_helper import get_image_template_directory, setting_template_sub_directory
 from .overlays import ImageSelectorOverlay, BlobBoxOverlay
 
 mod = Module()
@@ -26,8 +27,12 @@ def save_image_template(image):
         ".png"
 
     templates_directory = get_image_template_directory()
-    full_filename = os.path.join(templates_directory, unique_filename)
+    sub_directory = setting_template_sub_directory.get()
+    if sub_directory:
+        templates_directory = os.path.join(templates_directory, sub_directory)
 
+    full_filename = os.path.join(templates_directory, unique_filename)
+    print(f'full_filename={full_filename}')
     if not os.path.exists(templates_directory):
         os.mkdir(templates_directory)
 
@@ -44,6 +49,8 @@ def handle_image_click_builder(result):
         return
 
     filename = save_image_template(result["image"])
+    directory_output_without_templates_suffix: str = setting_template_sub_directory.get()
+    print(f'directory_output_without_templates_suffix={directory_output_without_templates_suffix}')
     index = result["index"]
 
     offset_bit = ""
@@ -51,7 +58,7 @@ def handle_image_click_builder(result):
         offset_bit = ", ".join([""] + list(map(lambda x: str(int(x)), result["offset"])))
 
     command = "\n".join([
-        f'  user.click_to_that_image_and_comeback("{filename}", 0, 0.8)',
+            f'  user.click_to_that_image_and_comeback("{directory_output_without_templates_suffix}/{filename}", 0, 0.8)',
     ])
     print('hander')
     actions.clip.set_text(command)
@@ -72,10 +79,10 @@ def handle_multi_image_builder(result):
         offset_bit = ", ".join([""] + list(map(lambda x: str(int(x)), result["offset"])))
 
     command = "\n".join([
-        "",
-        ":",
-        f'    matches = user.mouse_helper_find_template_relative("{filename}"{offset_bit})',
-        "    user.marker_ui_show(matches)",
+            "",
+            ":",
+            f'    matches = user.mouse_helper_find_template_relative("{filename}"{offset_bit})',
+            "    user.marker_ui_show(matches)",
     ])
     actions.clip.set_text(command)
     actions.app.notify("Copied new command to clipboard")
@@ -101,61 +108,62 @@ def handle_blob_detect_builder(result):
             return str(position - minimum)
 
     offsets = " ".join([
-        calculate_offset(result.x, active_rectangle.x, active_rectangle.width),
-        calculate_offset(result.y, active_rectangle.y, active_rectangle.height),
-        calculate_offset(result.x + result.width, active_rectangle.x, active_rectangle.width),
-        calculate_offset(result.y + result.height, active_rectangle.y, active_rectangle.height),
+            calculate_offset(result.x, active_rectangle.x, active_rectangle.width),
+            calculate_offset(result.y, active_rectangle.y, active_rectangle.height),
+            calculate_offset(result.x + result.width, active_rectangle.x, active_rectangle.width),
+            calculate_offset(result.y + result.height, active_rectangle.y, active_rectangle.height),
     ])
 
     command = "\n".join([
-        "",
-        ":",
-        f'    bounding_rectangle = user.mouse_helper_calculate_relative_rect("{offsets}", "active_window")',
-        f'    user.mouse_helper_blob_picker(bounding_rectangle)',
+            "",
+            ":",
+            f'    bounding_rectangle = user.mouse_helper_calculate_relative_rect("{offsets}", "active_window")',
+            f'    user.mouse_helper_blob_picker(bounding_rectangle)',
     ])
     actions.clip.set_text(command)
     actions.app.notify("Copied new command to clipboard")
 
 
 command_wizards = [
-    (
-        "Click a single image on the screen",
-        ImageSelectorOverlay,
-        handle_image_click_builder,
         (
-            "Select a region of the screen as an image to find in your voice command "
-            "then press enter to confirm your selection. Press escape to cancel.\n\n"
-            "After selecting and before enter, optionally right click to define an "
-            "offset from the selected region. This will be clicked instead of the "
-            "center of the region."
-        )
-    ),
-    (
-        "Show markers on all image matches on screen",
-        ImageSelectorOverlay,
-        handle_multi_image_builder,
+                "Click a single image on the screen",
+                ImageSelectorOverlay,
+                handle_image_click_builder,
+                (
+                        f'Output subdirectory: {setting_template_sub_directory.get()}\n\n'
+                        "Select a region of the screen as an image to find in your voice command "
+                        "then press enter to confirm your selection. Press escape to cancel.\n\n"
+                        "After selecting and before enter, optionally right click to define an "
+                        "offset from the selected region. This will be clicked instead of the "
+                        "center of the region."
+                )
+        ),
         (
-            "Select a region of the screen as an image to find in your voice command "
-            "then press enter to confirm your selection. Press escape to cancel.\n\n"
-            "After selecting and before enter, optionally right click to define an "
-            "offset from the selected region. This will be clicked instead of the "
-            "center of the region."
-        )
-    ),
-    (
-        "Find items in a box to click",
-        BlobBoxOverlay,
-        handle_blob_detect_builder,
+                "Show markers on all image matches on screen",
+                ImageSelectorOverlay,
+                handle_multi_image_builder,
+                (
+                        "Select a region of the screen as an image to find in your voice command "
+                        "then press enter to confirm your selection. Press escape to cancel.\n\n"
+                        "After selecting and before enter, optionally right click to define an "
+                        "offset from the selected region. This will be clicked instead of the "
+                        "center of the region."
+                )
+        ),
         (
-            "Select a region of the active window to use in your voice command then press "
-            "enter to confirm your selection. Press escape to cancel.\n\n"
-            "When drawing a box wider than tall, the first row of pixels will be "
-            "considered background color. When the box is taller than wide the first "
-            "column of pixels will be considered background color.\n\n"
-            "The background color will be used to detect clickable regions in the area "
-            "you selected. "
+                "Find items in a box to click",
+                BlobBoxOverlay,
+                handle_blob_detect_builder,
+                (
+                        "Select a region of the active window to use in your voice command then press "
+                        "enter to confirm your selection. Press escape to cancel.\n\n"
+                        "When drawing a box wider than tall, the first row of pixels will be "
+                        "considered background color. When the box is taller than wide the first "
+                        "column of pixels will be considered background color.\n\n"
+                        "The background color will be used to detect clickable regions in the area "
+                        "you selected. "
+                )
         )
-    )
 ]
 
 existing_overlay = None
@@ -175,6 +183,7 @@ def open_overlay(index):
     if existing_overlay:
         existing_overlay.destroy()
 
+    # print(f'command_wizards[index]={command_wizards[index]}')
     _, overlay, handler, help = command_wizards[index]
     existing_overlay = overlay(handler, text=help)
 
