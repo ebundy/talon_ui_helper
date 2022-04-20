@@ -1,13 +1,17 @@
+from time import sleep
+
 """
 Useful actions related to moving the mouse
 """
 
 import math
 import os
+from pathlib import Path
 from typing import Union, Optional, List
 
 from talon import actions, ui, screen, Module
 from talon.experimental import locate
+from talon.skia import Image
 from talon.types import Rect as TalonRect
 
 from .blob_detector import calculate_blob_rects
@@ -30,7 +34,11 @@ setting_template_sub_directory = mod.setting(
                 "The folder that templated images are saved to."
                 " Defaults to image_templates in your user folder"
         ),
-        default='pole-emploi'
+        # default='pole-emploi'
+
+        # default='snapsave'
+        default='tirexo'
+        # default='iherb'
         # default=None
 )
 
@@ -179,7 +187,8 @@ class MouseActions:
             xoffset: float = 0,
             yoffset: float = 0,
             region: Optional[TalonRect] = None,
-            threshold: float = 0.800
+            threshold: float = 0.800,
+            gray_comparison: bool = False
     ) -> List[TalonRect]:
         """
         Finds all matches for the given image template within the given region.
@@ -195,7 +204,10 @@ class MouseActions:
             TalonRect (see mouse_helper_calculate_relative_rect) or None to just use the
             active screen.
         """
+        if gray_comparison:
+            return compute_matches_with_gray(template_path)
 
+        # and
         if region is None:
             rect = actions.user.mouse_helper_calculate_relative_rect(
                     "0 0 -0 -0",
@@ -227,7 +239,10 @@ class MouseActions:
                         threshold=threshold
                 )
         ]
+        # pil_Image.from
+        # def from_file(cls, path, subset: Any | None = ...): ...
 
+        # locate.locate_in_image()
         return matches
 
     def mouse_helper_move_images_relative(
@@ -252,21 +267,24 @@ class MouseActions:
     def mouse_helper_move_image_relative_threshold(
             template_path: str,
             disambiguator: Union[int, str] = 0,
-            threshold: float = 0.80
+            threshold: float = 0.80,
+            gray_comparison: bool = False
     ):
         """todo"""
         actions.user.mouse_helper_move_image_relative(template_path, disambiguator, 0, 0, None,
-                                                      threshold)
+                                                      threshold, gray_comparison)
 
     def mouse_helper_move_image_relative(
             template_path: str,
             disambiguator: Union[int, str] = 0,
             xoffset: float = 0,
             yoffset: float = 0,
-            region: Optional[TalonRect] = None, threshold: float = 0.80
+            region: Optional[TalonRect] = None,
+            threshold: float = 0.80,
+            gray_comparison: bool = False
     ):
 
-        """' 
+        """'
         Moves the mouse relative to the template image given in template_path.
 
         :param template_path: Filename of the image to find. Can be an absolute path or
@@ -306,6 +324,7 @@ class MouseActions:
                 yoffset,
                 rect,
                 threshold=threshold,
+                gray_comparison=gray_comparison
         )
         if disambiguator != 0:
             sorted_matches = sorted(
@@ -366,20 +385,22 @@ class MouseActions:
 
     def click_to_that_image(template_path: str,
                             disambiguator: Union[int, str] = 0,
-                            threshold: float = 0.80):
+                            threshold: float = 0.80,
+                            gray_comparison: bool = False):
         """todo"""
         actions.user.mouse_helper_move_image_relative_threshold(template_path, disambiguator,
-                                                                threshold)
+                                                                threshold, gray_comparison)
         actions.sleep(0.5)
         actions.mouse_click(0)
 
     def click_to_that_image_and_comeback(template_path: str,
                                          disambiguator: Union[int, str] = 0,
-                                         threshold: float = 0.80):
+                                         threshold: float = 0.80,
+                                         gray_comparison: bool = False):
         """todo"""
         actions.user.mouse_helper_position_save()
         actions.user.mouse_helper_move_image_relative_threshold(template_path, disambiguator,
-                                                                threshold)
+                                                                threshold, gray_comparison)
 
         actions.sleep(0.5)
         actions.mouse_click(0)
@@ -411,9 +432,55 @@ class MouseActions:
         actions.sleep(0.5)
         actions.mouse_click(0)
 
+
 # template_path: str,
 # template_path_2: str,
 # disambiguator: Union[int, str] = 0,
 # xoffset: float = 0,
 # yoffset: float = 0,
 # region: Optional[TalonRect] = None
+
+def compute_matches_with_gray(template_image_to_find: str) -> List[TalonRect]:
+    from PIL import ImageGrab
+    from PIL import Image as Image_pil
+    actions.key("printscr")
+    sleep(0.5)
+    print_screen_image: Image_pil = ImageGrab.grabclipboard()
+    print(f'print_screen_image={print_screen_image}')
+    print_screen_temporary_file: Path = actions.user.get_talon_user_template_temporary_path() / 'print_screen_temporary_file.png'
+    print_screen_temporary_file_talon: Image = convert_pill_image_into_gray_scale_and_then_convert_into_talon_image(
+            print_screen_image, print_screen_temporary_file)
+
+    template_file = os.path.join(get_image_template_directory(), template_image_to_find)
+    template_temporary_file: Path = actions.user.get_talon_user_template_temporary_path() / 'template_temporary_file.png'
+    template_image_talon: Image = convert_pill_image_into_gray_scale_and_then_convert_into_talon_image(
+            Image_pil.open(template_file), template_temporary_file)
+
+    # template_file_img_gray: Image_pil = .convert('LA')
+    # path_temporary = os.path.join(get_image_template_directory(),
+    #                               template_image_to_find + '.temp.png')
+    # template_file_img_gray.save(path_temporary)
+    # print(f'template_file_img_gray={template_file_img_gray}')
+    # template_image_talon = Image.from_file(path=path_temporary)
+    # print(f'template_image_talon={template_image_talon}')
+    matches = [match for match in
+               # locate.locate_in_image(print_screen_temporary_file_talon, print_screen_temporary_file_talon, threshold=0.8)]
+               locate.locate_in_image(print_screen_temporary_file_talon, template_image_talon,
+                                      threshold=0.8)]
+    print(f'matches={matches}')
+    return matches
+
+
+def convert_pill_image_into_gray_scale_and_then_convert_into_talon_image(im,
+                                                                         temporary_file_dest) -> Image:
+    from PIL import Image as Image_pil
+
+    im = im.convert('LA')
+    # Path(            actions.path.talon_user() / 'image_templates/tirexo/tirexo-grey.png').resolve()
+    if im and isinstance(im, Image_pil.Image):
+        im.save(temporary_file_dest)
+    else:
+        raise ValueError('no image in the clipboard')
+    image_talon = Image.from_file(path=temporary_file_dest)
+    print(f'image_talon={image_talon}')
+    return image_talon

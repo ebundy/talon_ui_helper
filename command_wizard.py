@@ -58,7 +58,7 @@ def handle_image_click_builder(result):
         offset_bit = ", ".join([""] + list(map(lambda x: str(int(x)), result["offset"])))
 
     command = "\n".join([
-            f'  user.click_to_that_image_and_comeback("{directory_output_without_templates_suffix}/{filename}", 0, 0.8)',
+            f'  user.click_to_that_image("{directory_output_without_templates_suffix}/{filename}", 0, 0.8)',
     ])
     print('hander')
     actions.clip.set_text(command)
