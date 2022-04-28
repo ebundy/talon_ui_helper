@@ -27,20 +27,27 @@ setting_template_directory = mod.setting(
         default=None
         # default=None
 )
-setting_template_sub_directory = mod.setting(
-        "mouse_helper_template_sub_directory",
-        type=str,
-        desc=(
-                "The folder that templated images are saved to."
-                " Defaults to image_templates in your user folder"
-        ),
-        # default='pole-emploi'
 
-        # default='snapsave'
-        default='tirexo'
-        # default='iherb'
-        # default=None
-)
+
+# setting_template_sub_directory = mod.setting(
+#         "mouse_helper_template_sub_directory",
+#         type=str,
+#         desc=(
+#                 "The folder that templated images are saved to."
+#                 " Defaults to image_templates in your user folder"
+#         ),
+#         # default='pole-emploi'
+#
+#         # default='snapsave'
+#         # default='tirexo'
+#         # default='iherb'
+#         # default='carrefour'
+#         # default='wanimo'
+#         default='wanimo'
+#         # default='gitlab_web'
+#         # default=None
+#
+# )
 
 
 def get_image_template_directory():
@@ -184,11 +191,11 @@ class MouseActions:
 
     def mouse_helper_find_template_relative(
             template_path: str,
+            threshold: float = 0.800,
             xoffset: float = 0,
             yoffset: float = 0,
+            gray_comparison: bool = False,
             region: Optional[TalonRect] = None,
-            threshold: float = 0.800,
-            gray_comparison: bool = False
     ) -> List[TalonRect]:
         """
         Finds all matches for the given image template within the given region.
@@ -249,40 +256,39 @@ class MouseActions:
             template_path: str,
             template_path_2: str,
             disambiguator: Union[int, str] = 0,
+            threshold: float = 0.80,
             xoffset: float = 0,
             yoffset: float = 0,
+            gray_comparison: bool = False,
             region: Optional[TalonRect] = None
     ):
         """todo"""
         try:
-            actions.user.mouse_helper_move_image_relative(template_path, disambiguator, xoffset,
-                                                          yoffset, region)
+            actions.user.mouse_helper_move_image_relative(template_path,
+                                                          disambiguator,
+                                                          threshold,
+                                                          xoffset,
+                                                          yoffset,
+                                                          gray_comparison,
+                                                          region)
         except RuntimeError as e:
             # raise RuntimeError("No matches")
             print('the first image recognition failed,we will try another one', e)
-            actions.user.mouse_helper_move_image_relative(template_path_2, disambiguator, xoffset,
-                                                          yoffset, region)
-        pass
+            actions.user.mouse_helper_move_image_relative(template_path_2,
+                                                          disambiguator,
+                                                          threshold,
+                                                          xoffset,
+                                                          yoffset,
+                                                          gray_comparison,
+                                                          region)
 
-    def mouse_helper_move_image_relative_threshold(
-            template_path: str,
-            disambiguator: Union[int, str] = 0,
-            threshold: float = 0.80,
-            gray_comparison: bool = False
-    ):
-        """todo"""
-        actions.user.mouse_helper_move_image_relative(template_path, disambiguator, 0, 0, None,
-                                                      threshold, gray_comparison)
-
-    def mouse_helper_move_image_relative(
-            template_path: str,
-            disambiguator: Union[int, str] = 0,
-            xoffset: float = 0,
-            yoffset: float = 0,
-            region: Optional[TalonRect] = None,
-            threshold: float = 0.80,
-            gray_comparison: bool = False
-    ):
+    def mouse_helper_move_image_relative(template_path: str,
+                                         disambiguator: Union[int, str] = 0,
+                                         threshold: float = 0.80,
+                                         xoffset: float = 0,
+                                         yoffset: float = 0,
+                                         gray_comparison: bool = False,
+                                         region: Optional[TalonRect] = None):
 
         """'
         Moves the mouse relative to the template image given in template_path.
@@ -308,7 +314,7 @@ class MouseActions:
         """
 
         print(
-                f'mouse_helper_move_image_relative() with template_path={template_path}, disambiguator={disambiguator}, xoffset={xoffset}, yoffset={yoffset}, region={region}, threshold={threshold}')
+                f'mouse_helper_move_image_relative() with template_path={template_path}, disambiguator={disambiguator}, xoffset={xoffset}, yoffset={yoffset}, region={region}, threshold={threshold},gray_comparison={gray_comparison}')
 
         if region is None:
             rect = actions.user.mouse_helper_calculate_relative_rect(
@@ -320,11 +326,11 @@ class MouseActions:
 
         sorted_matches = actions.user.mouse_helper_find_template_relative(
                 template_path,
+                threshold,
                 xoffset,
                 yoffset,
+                gray_comparison,
                 rect,
-                threshold=threshold,
-                gray_comparison=gray_comparison
         )
         if disambiguator != 0:
             sorted_matches = sorted(
@@ -386,22 +392,37 @@ class MouseActions:
     def click_to_that_image(template_path: str,
                             disambiguator: Union[int, str] = 0,
                             threshold: float = 0.80,
-                            gray_comparison: bool = False):
+                            xoffset: float = 0,
+                            yoffset: float = 0,
+                            gray_comparison: bool = False,
+                            region: Optional[TalonRect] = None):
         """todo"""
-        actions.user.mouse_helper_move_image_relative_threshold(template_path, disambiguator,
-                                                                threshold, gray_comparison)
+        actions.user.mouse_helper_move_image_relative(template_path,
+                                                      disambiguator,
+                                                      threshold,
+                                                      xoffset,
+                                                      yoffset,
+                                                      gray_comparison,
+                                                      region)
         actions.sleep(0.5)
         actions.mouse_click(0)
 
     def click_to_that_image_and_comeback(template_path: str,
                                          disambiguator: Union[int, str] = 0,
                                          threshold: float = 0.80,
-                                         gray_comparison: bool = False):
+                                         xoffset: float = 0,
+                                         yoffset: float = 0,
+                                         gray_comparison: bool = False,
+                                         region: Optional[TalonRect] = None):
         """todo"""
         actions.user.mouse_helper_position_save()
-        actions.user.mouse_helper_move_image_relative_threshold(template_path, disambiguator,
-                                                                threshold, gray_comparison)
-
+        actions.user.mouse_helper_move_image_relative(template_path,
+                                                      disambiguator,
+                                                      threshold,
+                                                      xoffset,
+                                                      yoffset,
+                                                      gray_comparison,
+                                                      region)
         actions.sleep(0.5)
         actions.mouse_click(0)
         actions.sleep(0.05)
@@ -409,13 +430,17 @@ class MouseActions:
 
     def click_to_that_images_and_comeback(template_path_one: str, template_path_two: str,
                                           disambiguator: Union[int, str] = 0,
-                                          threshold: float = 0.80):
+                                          threshold: float = 0.80,
+                                          xoffset: float = 0,
+                                          yoffset: float = 0,
+                                          gray_comparison: bool = False
+                                          ):
         """todo"""
         actions.user.mouse_helper_position_save()
 
         actions.user.mouse_helper_move_images_relative(template_path_one, template_path_two,
                                                        disambiguator,
-                                                       threshold)
+                                                       threshold, xoffset, yoffset, gray_comparison)
 
         actions.sleep(0.5)
         actions.mouse_click(0)
@@ -424,11 +449,18 @@ class MouseActions:
 
     def click_to_that_images(template_path_one: str, template_path_two: str,
                              disambiguator: Union[int, str] = 0,
-                             threshold: float = 0.80):
+                             threshold: float = 0.80,
+                             xoffset: float = 0,
+                             yoffset: float = 0,
+                             gray_comparison: bool = False
+                             ):
         """todo"""
         actions.user.mouse_helper_move_images_relative(template_path_one, template_path_two,
                                                        disambiguator,
-                                                       threshold)
+                                                       threshold,
+                                                       xoffset,
+                                                       yoffset,
+                                                       gray_comparison)
         actions.sleep(0.5)
         actions.mouse_click(0)
 

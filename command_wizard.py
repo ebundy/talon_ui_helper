@@ -8,8 +8,9 @@ import os
 from talon import Module, Context, actions, ui, imgui
 
 # from mouse_helper import *
-from .mouse_helper import get_image_template_directory, setting_template_sub_directory
+from .mouse_helper import get_image_template_directory
 from .overlays import ImageSelectorOverlay, BlobBoxOverlay
+from ..knausj_talon.shared_settings_module import setting_template_sub_directory
 
 mod = Module()
 mod.tag("command_wizard_showing", desc="The command wizard is showing")
@@ -58,7 +59,8 @@ def handle_image_click_builder(result):
         offset_bit = ", ".join([""] + list(map(lambda x: str(int(x)), result["offset"])))
 
     command = "\n".join([
-            f'  user.click_to_that_image("{directory_output_without_templates_suffix}/{filename}", 0, 0.8)',
+            # f'    user.click_to_that_image("{directory_output_without_templates_suffix}/{filename}", 0, 0.8)',
+            f'{directory_output_without_templates_suffix}/{filename}',
     ])
     print('hander')
     actions.clip.set_text(command)
