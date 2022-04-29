@@ -1,3 +1,4 @@
+import traceback
 from time import sleep
 
 """
@@ -149,7 +150,8 @@ class MouseActions:
         of interest and a set of offsets. Examples:
 
             "0 0 -0 -0", "active_screen": Would indicate the entire active screen.
-            "10 20 30 40", "active_window": Would indicate the region between pixels (10, 20) and (30, 40)
+            "10 20 30 40", "active_window": Would indicate the region between pixels (10,
+            20) and (30, 40)
               on the currently focussed window.
             "10 20 -30 40", "active_window": Would indicate the region between pixels (10, 20) and
               the pixel 30 units from the right hand side of the window and 40 units from the top.
@@ -239,15 +241,37 @@ class MouseActions:
                                           look_for_the_best_match: bool = False):
         """todo"""
         try:
-            actions.user.mouse_helper_move_image_relative(template_path,
-                                                          disambiguator,
-                                                          threshold,
-                                                          xoffset,
-                                                          yoffset,
-                                                          gray_comparison,
-                                                          region)
+            # TODO For now the talon locate API doesn't provide the score of matches, so the best
+            #  match feature is not still implementable
+            list_of_matching_rectangle_first_image: List[
+                TalonRect] = actions.user.mouse_helper_move_image_relative(
+                    template_path,
+                    disambiguator,
+                    threshold,
+                    xoffset,
+                    yoffset,
+                    gray_comparison,
+                    region)
 
-            # if look_for_the_best_match:
+            if look_for_the_best_match:
+
+                try:
+                    print(f'because we look for the best match, we will try to match with the '
+                          f'second image')
+                    list_of_matching_rectangle_second_image: List[
+                        TalonRect] = actions.user.mouse_helper_move_image_relative(template_path_2,
+                                                                                   disambiguator,
+                                                                                   threshold,
+                                                                                   xoffset,
+                                                                                   yoffset,
+                                                                                   gray_comparison,
+                                                                                   region,
+                                                                                   True)
+
+                except Exception as e:
+                    print(traceback.format_exc())
+                    mouse_move(list_of_matching_rectangle_first_image)
+
 
         except RuntimeError as e:
             # raise RuntimeError("No matches")
@@ -269,7 +293,7 @@ class MouseActions:
                                          gray_comparison: bool = False,
                                          region: Optional[TalonRect] = None,
                                          should_use_cached_image: bool = False,
-                                         should_move_mouse: bool = True):
+                                         should_move_mouse: bool = True) -> List[TalonRect]:
 
         """'
         Moves the mouse relative to the template image given in template_path.
@@ -294,7 +318,9 @@ class MouseActions:
             active screen.
         """
 
-        print(f'mouse_helper_move_image_relative() with template_path={template_path}, disambiguator={disambiguator}, xoffset={xoffset}, yoffset={yoffset}, region={region}, threshold={threshold},gray_comparison={gray_comparison}')
+        print(f'mouse_helper_move_image_relative() with template_path={template_path}, '
+              f'disambiguator={disambiguator}, xoffset={xoffset}, yoffset={yoffset}, '
+              f'region={region}, threshold={threshold},gray_comparison={gray_comparison}')
 
         if region is None:
             rect = actions.user.mouse_helper_calculate_relative_rect("0 0 -0 -0", "active_screen")
@@ -320,7 +346,8 @@ class MouseActions:
             raise RuntimeError(f"No matches for image {template_path}")
 
         if disambiguator in ("mouse", "mouse_cycle"):
-            # math.ceil is needed here to ensure we only look at pixels after the current template match if we're
+            # math.ceil is needed here to ensure we only look at pixels after the current
+            # template match if we're
             # cycling between matches. math.floor would pick up the current one again.
             xnorm = math.ceil(actions.mouse_x() - sorted_matches[0].width / 2)
             ynorm = math.ceil(actions.mouse_y() - sorted_matches[0].height / 2)
@@ -431,7 +458,8 @@ class MouseActions:
                              threshold: float = 0.80,
                              xoffset: float = 0,
                              yoffset: float = 0,
-                             gray_comparison: bool = False):
+                             gray_comparison: bool = False,
+                             look_for_the_best_match: bool = False, ):
         """todo"""
         actions.user.mouse_helper_move_images_relative(template_path_one,
                                                        template_path_two,
@@ -439,7 +467,9 @@ class MouseActions:
                                                        threshold,
                                                        xoffset,
                                                        yoffset,
-                                                       gray_comparison)
+                                                       gray_comparison,
+                                                       None,
+                                                       look_for_the_best_match)
         actions.sleep(0.5)
         actions.mouse_click(0)
 
@@ -455,26 +485,30 @@ def compute_matches_with_gray(template_image_to_find: str, should_use_cached_ima
     TalonRect]:
     from PIL import ImageGrab
     from PIL import Image as Image_pil
-    print_screen_temporary_file: Path = actions.user.get_talon_user_template_temporary_path() / 'print_screen_temporary_file.png'
+    print_screen_temporary_file: Path = actions.user.get_talon_user_template_temporary_path() / \
+                                        'print_screen_temporary_file.png'
     print_screen_temporary_file_talon: Image = None
     if not should_use_cached_image:
         actions.key("printscr")
         sleep(0.5)
         print_screen_image: Image_pil = ImageGrab.grabclipboard()
         print(f'print_screen_image={print_screen_image}')
-        print_screen_temporary_file_talon = convert_pill_image_into_gray_scale_and_then_convert_into_talon_image(
-                print_screen_image,
-                print_screen_temporary_file)
+        print_screen_temporary_file_talon = \
+            convert_pill_image_into_gray_scale_and_then_convert_into_talon_image(
+                    print_screen_image,
+                    print_screen_temporary_file)
 
     else:
         print(f'Use cached image')
         print_screen_temporary_file_talon = Image.from_file(path=print_screen_temporary_file)
 
     template_file = os.path.join(get_image_template_directory(), template_image_to_find)
-    template_temporary_file: Path = actions.user.get_talon_user_template_temporary_path() / 'template_temporary_file.png'
-    template_image_talon: Image = convert_pill_image_into_gray_scale_and_then_convert_into_talon_image(
-            Image_pil.open(template_file),
-            template_temporary_file)
+    template_temporary_file: Path = actions.user.get_talon_user_template_temporary_path() / \
+                                    'template_temporary_file.png'
+    template_image_talon: Image = \
+        convert_pill_image_into_gray_scale_and_then_convert_into_talon_image(
+                Image_pil.open(template_file),
+                template_temporary_file)
 
     matches = [match for match in locate.locate_in_image(print_screen_temporary_file_talon,
                                                          template_image_talon,
@@ -487,9 +521,11 @@ from PIL import Image as Image_pil
 
 
 def convert_pill_image_into_gray_scale_and_then_convert_into_talon_image(im: Image_pil.Image,
-                                                                         temporary_file_dest) -> Image:
+                                                                         temporary_file_dest) -> \
+        Image:
     im = im.convert('LA')
-    # Path(            actions.path.talon_user() / 'image_templates/tirexo/tirexo-grey.png').resolve()
+    # Path(            actions.path.talon_user() /
+    # 'image_templates/tirexo/tirexo-grey.png').resolve()
     if im and isinstance(im, Image_pil.Image):
         im.save(temporary_file_dest)
     else:
