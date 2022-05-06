@@ -27,25 +27,6 @@ setting_template_directory = mod.setting("mouse_helper_template_directory",
                                          )
 
 
-# setting_template_sub_directory = mod.setting(
-#         "mouse_helper_template_sub_directory",
-#         type=str,
-#         desc=(
-#                 "The folder that templated images are saved to."
-#                 " Defaults to image_templates in your user folder"
-#         ),
-#         # default='pole-emploi'
-#
-#         # default='snapsave'
-#         # default='tirexo'
-#         # default='iherb'
-#         # default='carrefour'
-#         # default='wanimo'
-#         default='wanimo'
-#         # default='gitlab_web'
-#         # default=None
-#
-# )
 
 
 def get_image_template_directory():
