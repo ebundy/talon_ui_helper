@@ -505,8 +505,8 @@ def convert_pill_image_into_gray_scale_and_then_convert_into_talon_image(im: Ima
                                                                          temporary_file_dest) -> \
         Image:
     im = im.convert('LA')
-    # Path(            actions.path.talon_user() /
-    # 'image_templates/tirexo/tirexo-grey.png').resolve()
+
+
     if im and isinstance(im, Image_pil.Image):
         im.save(temporary_file_dest)
     else:
