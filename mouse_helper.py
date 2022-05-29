@@ -29,25 +29,6 @@ setting_template_directory = mod.setting("mouse_helper_template_directory",
                                          )
 
 
-# setting_template_sub_directory = mod.setting(
-#         "mouse_helper_template_sub_directory",
-#         type=str,
-#         desc=(
-#                 "The folder that templated images are saved to."
-#                 " Defaults to image_templates in your user folder"
-#         ),
-#         # default='pole-emploi'
-#
-#         # default='snapsave'
-#         # default='tirexo'
-#         # default='iherb'
-#         # default='carrefour'
-#         # default='wanimo'
-#         default='wanimo'
-#         # default='gitlab_web'
-#         # default=None
-#
-# )
 
 
 def get_image_template_directory():
@@ -461,8 +442,8 @@ def convert_pill_image_into_gray_scale_and_then_convert_into_talon_image(im: Ima
                                                                          temporary_file_dest) -> \
         Image:
     im = im.convert('LA')
-    # Path(            actions.path.talon_user() /
-    # 'image_templates/tirexo/tirexo-grey.png').resolve()
+
+
     if im and isinstance(im, Image_pil.Image):
         im.save(temporary_file_dest)
     else:
