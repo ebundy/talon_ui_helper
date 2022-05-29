@@ -1,5 +1,7 @@
-import traceback
+import time
 from time import sleep
+
+from PIL.Image import Image, LANCZOS
 
 """
 Useful actions related to moving the mouse
@@ -101,6 +103,10 @@ def calculate_relative(modifier: str, start: float, end: float) -> float:
 
 
 saved_mouse_pos = None
+
+
+def get_scale_tries_left_default() -> List[float]:
+    return [0.9, 1.1, 1.2]
 
 
 @mod.action_class
@@ -212,6 +218,7 @@ class MouseActions:
 
         print(f'rect={rect}, type={type(rect)}')
 
+        print(f'template_path={template_path}')
         if os.pathsep in template_path:
             # Absolute path specified
             template_file = template_path
@@ -219,11 +226,15 @@ class MouseActions:
             # Filename in image templates directory specified
             template_file = os.path.join(get_image_template_directory(), template_path)
 
+        start = time.time()
         matches = [TalonRect(match.x + xoffset, match.y + yoffset, match.width, match.height)
 
                    for match in locate.locate(template_file, rect=rect,  # threshold=0.900,
                                               # threshold=0.800
                                               threshold=threshold)]
+        end = time.time()
+        print(
+                'duration=' + str(end - start) + ' for locate.locate() ')
         # pil_Image.from
         # def from_file(cls, path, subset: Any | None = ...): ...
 
@@ -244,132 +255,58 @@ class MouseActions:
             # TODO For now the talon locate API doesn't provide the score of matches, so the best
             #  match feature is not still implementable
             list_of_matching_rectangle_first_image: List[
-                TalonRect] = actions.user.mouse_helper_move_image_relative(
+                TalonRect] = mouse_helper_move_image_relative(
                     template_path,
                     disambiguator,
                     threshold,
                     xoffset,
                     yoffset,
                     gray_comparison,
-                    region)
+                    region, scale_tries_left=get_scale_tries_left_default())
 
-            if look_for_the_best_match:
-
-                try:
-                    print(f'because we look for the best match, we will try to match with the '
-                          f'second image')
-                    list_of_matching_rectangle_second_image: List[
-                        TalonRect] = actions.user.mouse_helper_move_image_relative(template_path_2,
-                                                                                   disambiguator,
-                                                                                   threshold,
-                                                                                   xoffset,
-                                                                                   yoffset,
-                                                                                   gray_comparison,
-                                                                                   region,
-                                                                                   True)
-
-                except Exception as e:
-                    print(traceback.format_exc())
-                    mouse_move(list_of_matching_rectangle_first_image)
+            # if look_for_the_best_match:
+            #
+            #     try:
+            #         print(f'because we look for the best match, we will try to match with the '
+            #               f'second image')
+            #         list_of_matching_rectangle_second_image: List[
+            #             TalonRect] = mouse_helper_move_image_relative(template_path_2,
+            #                                                           disambiguator,
+            #                                                           threshold,
+            #                                                           xoffset,
+            #                                                           yoffset,
+            #                                                           gray_comparison,
+            #                                                           region,
+            #                                                           True,
+            #                                                           scale_tries_left=get_scale_tries_left_default())
+            #
+            #     except Exception as e:
+            #         print(traceback.format_exc())
+            #         mouse_move(list_of_matching_rectangle_first_image)
 
 
         except RuntimeError as e:
             # raise RuntimeError("No matches")
             print('the first image recognition failed,we will try another one', e)
-            actions.user.mouse_helper_move_image_relative(template_path_2,
-                                                          disambiguator,
-                                                          threshold,
-                                                          xoffset,
-                                                          yoffset,
-                                                          gray_comparison,
-                                                          region,
-                                                          True)
 
-    def mouse_helper_move_image_relative(template_path: str,
-                                         disambiguator: Union[int, str] = 0,
-                                         threshold: float = 0.80,
-                                         xoffset: float = 0,
-                                         yoffset: float = 0,
-                                         gray_comparison: bool = False,
-                                         region: Optional[TalonRect] = None,
-                                         should_use_cached_image: bool = False,
-                                         should_move_mouse: bool = True) -> List[TalonRect]:
-
-        """'
-        Moves the mouse relative to the template image given in template_path.
-
-        :param template_path: Filename of the image to find. Can be an absolute path or
-            if no '/' or '\\' character is specified, it is relative to the image
-            templates directory.
-        :param disambiguator: If there are multiple matches, use this to indicate
-            which one you want to match. Matches are ordered left to right top to
-            bottom. If disambiguator is an integer then it's just an index into that list.
-            If it's the string "mouse" then it's the next match in the region to the right
-            and down from the mouse after shifting back the offset amount and up and left
-            half the size and width of the template. If it is "mouse_cycle" then if there
-            are no further matches it will attempt to start from the top of the screen again.
-            This is useful for iterating through rows in a table for example.
-        :param xoffset: Amount to shift in the x direction relative to the
-            center of the template.
-        :param yoffset: Amount to shift in the y direction relative to the
-            center of the template.
-        :param region: The region to search for the template in. Either a screen relative
-            TalonRect (see mouse_helper_calculate_relative_rect) or None to just use the
-            active screen.
-        """
-
-        print(f'mouse_helper_move_image_relative() with template_path={template_path}, '
-              f'disambiguator={disambiguator}, xoffset={xoffset}, yoffset={yoffset}, '
-              f'region={region}, threshold={threshold},gray_comparison={gray_comparison}')
-
-        if region is None:
-            rect = actions.user.mouse_helper_calculate_relative_rect("0 0 -0 -0", "active_screen")
-        else:
-            rect = region
-        print(f'rect={rect}, type={type(rect)}')
-        sorted_matches = actions.user.mouse_helper_find_template_relative(template_path,
-                                                                          threshold,
-                                                                          xoffset,
-                                                                          yoffset,
-                                                                          gray_comparison,
-                                                                          rect,
-                                                                          should_use_cached_image)
-        print(f'sorted_matches={sorted_matches}, type={type(sorted_matches)}')
-        if disambiguator != 0:
-            sorted_matches = sorted(sorted_matches, key=lambda m: (m.x, m.y))
-            print(f'sorted_matches by position={sorted_matches}')
-        else:
-            print(f'sorted_matches by best matching={sorted_matches}')
-
-        if len(sorted_matches) == 0:
-            # Throw an exception to cancel any following commands in the .talon file
-            raise RuntimeError(f"No matches for image {template_path}")
-
-        if disambiguator in ("mouse", "mouse_cycle"):
-            # math.ceil is needed here to ensure we only look at pixels after the current
-            # template match if we're
-            # cycling between matches. math.floor would pick up the current one again.
-            xnorm = math.ceil(actions.mouse_x() - sorted_matches[0].width / 2)
-            ynorm = math.ceil(actions.mouse_y() - sorted_matches[0].height / 2)
-            filtered_matches = [match for match in sorted_matches if
-                                (match.y == ynorm and match.x > xnorm) or match.y > ynorm]
-
-            if len(filtered_matches) > 0:
-                match_rect = filtered_matches[0]
-            elif disambiguator == "mouse_cycle":
-                match_rect = sorted_matches[0]
-            else:
-                return
-        else:
-            if len(sorted_matches) <= disambiguator:
-                return
-
-            match_rect = sorted_matches[disambiguator]
-
-        if should_move_mouse:
-            mouse_move(match_rect)
-
-        return match_rect
+            try:
+                mouse_helper_move_image_relative(template_path_2,
+                                                 disambiguator,
+                                                 threshold,
+                                                 xoffset,
+                                                 yoffset,
+                                                 gray_comparison,
+                                                 region,
+                                                 True,
+                                                 scale_tries_left=get_scale_tries_left_default())
+            except RuntimeError as e:
+                message: str = f'we have no matching for ' \
+                               f'the 2 templates' \
+                               f'' \
+                               f'image_1:{template_path}, ' \
+                               f'image_2:{template_path_2}'
+                actions.user.display_warning_message(message)
+                raise e
 
     def mouse_helper_blob_picker(bounding_rectangle: TalonRect, min_gap_size: int = 5):
         """
@@ -395,13 +332,13 @@ class MouseActions:
                             gray_comparison: bool = False,
                             region: Optional[TalonRect] = None):
         """todo"""
-        actions.user.mouse_helper_move_image_relative(template_path,
-                                                      disambiguator,
-                                                      threshold,
-                                                      xoffset,
-                                                      yoffset,
-                                                      gray_comparison,
-                                                      region)
+        mouse_helper_move_image_relative(template_path,
+                                         disambiguator,
+                                         threshold,
+                                         xoffset,
+                                         yoffset,
+                                         gray_comparison,
+                                         region, scale_tries_left=get_scale_tries_left_default())
         actions.sleep(0.5)
         actions.mouse_click(0)
 
@@ -414,13 +351,13 @@ class MouseActions:
                                          region: Optional[TalonRect] = None):
         """todo"""
         actions.user.mouse_helper_position_save()
-        actions.user.mouse_helper_move_image_relative(template_path,
-                                                      disambiguator,
-                                                      threshold,
-                                                      xoffset,
-                                                      yoffset,
-                                                      gray_comparison,
-                                                      region)
+        mouse_helper_move_image_relative(template_path,
+                                         disambiguator,
+                                         threshold,
+                                         xoffset,
+                                         yoffset,
+                                         gray_comparison,
+                                         region, scale_tries_left=get_scale_tries_left_default())
         actions.sleep(0.5)
         actions.mouse_click(0)
         actions.sleep(0.05)
@@ -538,3 +475,157 @@ def convert_pill_image_into_gray_scale_and_then_convert_into_talon_image(im: Ima
 def mouse_move(match_rect):
     actions.mouse_move(math.ceil(match_rect.x + (match_rect.width / 2)),
                        math.ceil(match_rect.y + (match_rect.height / 2)), )
+
+
+def create_image_with_new_scale(template_path: str, scale_to_try: float) -> Path:
+    from PIL import Image
+
+    start = time.time()
+    template_file = os.path.join(get_image_template_directory(), template_path)
+    with Image.open(template_file) as im:
+        # Provide the target width and height of the image
+        print(f'(width, height)={(im.width, im.height)}')
+        (width, height) = (int(im.width * scale_to_try), int(im.height * scale_to_try))
+        print(f'(width, height)={(width, height)}')
+
+        im_resized: Image = im.resize((width, height), resample=LANCZOS)
+        scale_temporary_file: Path = actions.user.get_talon_user_template_temporary_path() \
+                                     / \
+                                     'scale_temporary_file.png'
+        im_resized.save(scale_temporary_file, quality=95)
+        print(f'scale_temporary_file={scale_temporary_file}')
+        end = time.time()
+        print(
+                'duration=' + str(end - start) + ' for create_image_with_new_scale() ')
+
+        return scale_temporary_file
+
+
+def mouse_helper_move_image_relative(template_path: str,
+                                     disambiguator: Union[int, str] = 0,
+                                     threshold: float = 0.80,
+                                     xoffset: float = 0,
+                                     yoffset: float = 0,
+                                     gray_comparison: bool = False,
+                                     region: Optional[TalonRect] = None,
+                                     should_use_cached_image: bool = False,
+                                     should_move_mouse: bool = True,
+                                     scale_tries_left: List[float] = None,
+                                     scale_to_try: float = 1) -> List[TalonRect]:
+    """'
+    Moves the mouse relative to the template image given in template_path.
+
+    :param template_path: Filename of the image to find. Can be an absolute path or
+        if no '/' or '\\' character is specified, it is relative to the image
+        templates directory.
+    :param disambiguator: If there are multiple matches, use this to indicate
+        which one you want to match. Matches are ordered left to right top to
+        bottom. If disambiguator is an integer then it's just an index into that list.
+        If it's the string "mouse" then it's the next match in the region to the right
+        and down from the mouse after shifting back the offset amount and up and left
+        half the size and width of the template. If it is "mouse_cycle" then if there
+        are no further matches it will attempt to start from the top of the screen again.
+        This is useful for iterating through rows in a table for example.
+    :param xoffset: Amount to shift in the x direction relative to the
+        center of the template.
+    :param yoffset: Amount to shift in the y direction relative to the
+        center of the template.
+    :param region: The region to search for the template in. Either a screen relative
+        TalonRect (see mouse_helper_calculate_relative_rect) or None to just use the
+        active screen.
+    """
+
+    print(f'mouse_helper_move_image_relative() with template_path={template_path}, '
+          f'disambiguator={disambiguator}, xoffset={xoffset}, yoffset={yoffset}, '
+          f'region={region}, threshold={threshold},gray_comparison={gray_comparison},'
+          f'scale_to_try={scale_to_try},scale_tries_left={scale_tries_left}')
+
+    if region is None:
+        rect = actions.user.mouse_helper_calculate_relative_rect("0 0 -0 -0", "active_screen")
+    else:
+        rect = region
+    print(f'rect={rect}, type={type(rect)}')
+    print(f'scale_to_try={scale_to_try}')
+    if scale_to_try != 1:
+        print(f'create_image_with_new_scale(),scale_to_try={scale_to_try},template_path='
+              f'{template_path}')
+        template_path_with_new_scale: Path = create_image_with_new_scale(template_path,
+                                                                         scale_to_try)
+        template_path_str = str(template_path_with_new_scale)
+
+    else:
+        template_path_str = template_path
+
+    sorted_matches = actions.user.mouse_helper_find_template_relative(template_path_str,
+                                                                      threshold,
+                                                                      xoffset,
+                                                                      yoffset,
+                                                                      gray_comparison,
+                                                                      rect,
+                                                                      should_use_cached_image)
+    if len(sorted_matches) > 15:
+        message: str = f'WARNING: we have too much matching ({len(sorted_matches)})for ' \
+                       f'the ' \
+                       f'' \
+                       f'image:{template_path}'
+        actions.user.display_warning_message(message)
+        raise RuntimeError(message)
+
+    print(f'sorted_matches={sorted_matches}, type={type(sorted_matches)}')
+    if disambiguator != 0:
+        sorted_matches = sorted(sorted_matches, key=lambda m: (m.x, m.y))
+        print(f'sorted_matches by position={sorted_matches}')
+
+    else:
+        print(f'sorted_matches by best matching={sorted_matches}')
+
+    if len(sorted_matches) == 0:
+        print(f'scale_tries_left={scale_tries_left}')
+        # Throw an exception to cancel any following commands in the .talon file
+        # message: str = f'WARNING: we have too much matching ({len(sorted_matches)})for ' \
+        #                f'the ' \
+        #                f'' \
+        #                f'image:{template_path}'
+        # actions.user.display_warning_message(message)
+        if not scale_tries_left:
+            raise RuntimeError(f"No matches for image {template_path}")
+        print(f'scale_tries_left remaining={scale_tries_left}, we will retry with scaling')
+        scale_to_try = scale_tries_left.pop(0)
+        print(f'scale_to_try={scale_to_try}')
+        mouse_helper_move_image_relative(template_path,
+                                         disambiguator,
+                                         threshold,
+                                         xoffset,
+                                         yoffset,
+                                         gray_comparison,
+                                         region,
+                                         should_use_cached_image,
+                                         should_move_mouse,
+                                         scale_tries_left,
+                                         scale_to_try)
+
+    if disambiguator in ("mouse", "mouse_cycle"):
+        # math.ceil is needed here to ensure we only look at pixels after the current
+        # template match if we're
+        # cycling between matches. math.floor would pick up the current one again.
+        xnorm = math.ceil(actions.mouse_x() - sorted_matches[0].width / 2)
+        ynorm = math.ceil(actions.mouse_y() - sorted_matches[0].height / 2)
+        filtered_matches = [match for match in sorted_matches if
+                            (match.y == ynorm and match.x > xnorm) or match.y > ynorm]
+
+        if len(filtered_matches) > 0:
+            match_rect = filtered_matches[0]
+        elif disambiguator == "mouse_cycle":
+            match_rect = sorted_matches[0]
+        else:
+            return
+    else:
+        if len(sorted_matches) <= disambiguator:
+            return
+
+        match_rect = sorted_matches[disambiguator]
+
+    if should_move_mouse:
+        mouse_move(match_rect)
+
+    return match_rect

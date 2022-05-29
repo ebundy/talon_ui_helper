@@ -96,3 +96,4 @@ class MarkerUiActions:
             rect.x + rect.width / 2,
             rect.y + rect.height / 2,
         )
+
