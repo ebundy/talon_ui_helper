@@ -1,5 +1,11 @@
+import concurrent.futures
+import concurrent.futures
+import concurrent.futures
+import threading
 import time
+from concurrent.futures import Future, as_completed
 from time import sleep
+from typing import Set
 
 from PIL.Image import Image, LANCZOS
 
@@ -85,7 +91,7 @@ saved_mouse_pos = None
 
 
 def get_scale_tries_left_default() -> List[float]:
-    return [0.9, 1.1, 1.2]
+    return [0.9, 1.1, 1.2, 0.8]
 
 
 @mod.action_class
@@ -186,6 +192,7 @@ class MouseActions:
             TalonRect (see mouse_helper_calculate_relative_rect) or None to just use the
             active screen.
         """
+        thread_name: str = threading.current_thread().getName()
         if gray_comparison:
             return compute_matches_with_gray(template_path, should_use_cached_image)
 
@@ -195,9 +202,9 @@ class MouseActions:
         else:
             rect = region
 
-        print(f'rect={rect}, type={type(rect)}')
+        # print(f'rect={rect}, type={type(rect)}')
 
-        print(f'template_path={template_path}')
+        print(f'[thread-{thread_name}] template_path={template_path}')
         if os.pathsep in template_path:
             # Absolute path specified
             template_file = template_path
@@ -212,8 +219,7 @@ class MouseActions:
                                               # threshold=0.800
                                               threshold=threshold)]
         end = time.time()
-        print(
-                'duration=' + str(end - start) + ' for locate.locate() ')
+        print(f'[thread-{thread_name}] duration=' + str(end - start) + ' for locate.locate() ')
         # pil_Image.from
         # def from_file(cls, path, subset: Any | None = ...): ...
 
@@ -230,62 +236,71 @@ class MouseActions:
                                           region: Optional[TalonRect] = None,
                                           look_for_the_best_match: bool = False):
         """todo"""
-        try:
-            # TODO For now the talon locate API doesn't provide the score of matches, so the best
-            #  match feature is not still implementable
-            list_of_matching_rectangle_first_image: List[
-                TalonRect] = mouse_helper_move_image_relative(template_path,
-                                                              disambiguator,
-                                                              threshold,
-                                                              xoffset,
-                                                              yoffset,
-                                                              gray_comparison,
-                                                              region,
-                                                              scale_tries_left=get_scale_tries_left_default())
-
-            # if look_for_the_best_match:
-            #
-            #     try:
-            #         print(f'because we look for the best match, we will try to match with the '
-            #               f'second image')
-            #         list_of_matching_rectangle_second_image: List[
-            #             TalonRect] = mouse_helper_move_image_relative(template_path_2,
-            #                                                           disambiguator,
-            #                                                           threshold,
-            #                                                           xoffset,
-            #                                                           yoffset,
-            #                                                           gray_comparison,
-            #                                                           region,
-            #                                                           True,
-            #                                                           scale_tries_left=get_scale_tries_left_default())
-            #
-            #     except Exception as e:
-            #         print(traceback.format_exc())
-            #         mouse_move(list_of_matching_rectangle_first_image)
-
-
-        except RuntimeError as e:
-            # raise RuntimeError("No matches")
-            print('the first image recognition failed,we will try another one', e)
-
+        # TODO For now the talon locate API doesn't provide the score of matches, so the best
+        #  match feature is not still implementable
+        template_paths: Set[str] = {template_path, template_path_2}
+        with concurrent.futures.ThreadPoolExecutor(max_workers=5, ) as executor:
+            futures_by_template: dict[Future, str] = {
+                    executor.submit(mouse_helper_move_image_relative, current_template,
+                                    disambiguator,
+                                    threshold,
+                                    xoffset,
+                                    yoffset,
+                                    gray_comparison,
+                                    region,
+                                    scale_tries_left=get_scale_tries_left_default()):
+                        current_template
+                    for current_template in template_paths}
+        for f in as_completed(futures_by_template):
             try:
-                mouse_helper_move_image_relative(template_path_2,
-                                                 disambiguator,
-                                                 threshold,
-                                                 xoffset,
-                                                 yoffset,
-                                                 gray_comparison,
-                                                 region,
-                                                 True,
-                                                 scale_tries_left=get_scale_tries_left_default())
-            except RuntimeError as e:
-                message: str = f'we have no matching for ' \
-                               f'the 2 templates' \
-                               f'' \
-                               f'image_1:{template_path}, ' \
-                               f'image_2:{template_path_2}'
-                actions.user.display_warning_message(message)
-                raise e
+                result = f.result()
+                return
+            except Exception as e:
+                print(f'We have no matching for the template:{futures_by_template[f]}')
+
+        message = f'All image matching have failed for images : ' \
+                  f'{list(futures_by_template.values())}'
+        print(message)
+        actions.user.display_warning_message(message)
+        raise e
+        # except RuntimeError as e:
+        #     message: str = f'we have no matching for ' \
+        #                    f'the 2 templates' \
+        #                    f'' \
+        #                    f'image_1:{template_path}, ' \
+        #                    f'image_2:{template_path_2}'
+        #     actions.user.display_warning_message(message)
+        #     raise e
+
+        # mouse_helper_move_image_relative(template_path,
+        #                                  disambiguator,
+        #                                  threshold,
+        #                                  xoffset,
+        #                                  yoffset,
+        #                                  gray_comparison,
+        #                                  region,
+        #                                  scale_tries_left=get_scale_tries_left_default())
+
+        # print('the first image recognition failed,we will try another one', e)
+
+        # mouse_helper_move_image_relative(template_path_2,
+        #                                  disambiguator,
+        #                                  threshold,
+        #                                  xoffset,
+        #                                  yoffset,
+        #                                  gray_comparison,
+        #                                  region,
+        #                                  True,
+        #                                  scale_tries_left=get_scale_tries_left_default())
+
+    # except RuntimeError as e:
+    #     message: str = f'we have no matching for ' \
+    #                    f'the 2 templates' \
+    #                    f'' \
+    #                    f'image_1:{template_path}, ' \
+    #                    f'image_2:{template_path_2}'
+    #     actions.user.display_warning_message(message)
+    #     raise e
 
     def mouse_helper_blob_picker(bounding_rectangle: TalonRect, min_gap_size: int = 5):
         """
@@ -556,8 +571,10 @@ def mouse_helper_move_image_relative(template_path: str,
         TalonRect (see mouse_helper_calculate_relative_rect) or None to just use the
         active screen.
     """
+    thread_name: str = threading.current_thread().getName()
 
-    print(f'mouse_helper_move_image_relative() with template_path={template_path}, '
+    print(f'[thread-{thread_name}] mouse_helper_move_image_relative() with template_path='
+          f'{template_path}, '
           f'disambiguator={disambiguator}, xoffset={xoffset}, yoffset={yoffset}, '
           f'region={region}, threshold={threshold},gray_comparison={gray_comparison},'
           f'scale_to_try={scale_to_try},scale_tries_left={scale_tries_left}')
@@ -566,10 +583,11 @@ def mouse_helper_move_image_relative(template_path: str,
         rect = actions.user.mouse_helper_calculate_relative_rect("0 0 -0 -0", "active_screen")
     else:
         rect = region
-    print(f'rect={rect}, type={type(rect)}')
-    print(f'scale_to_try={scale_to_try}')
+    # print(f'rect={rect}, type={type(rect)}')
+    print(f'[thread-{thread_name}] scale_to_try={scale_to_try}')
     if scale_to_try != 1:
-        print(f'create_image_with_new_scale(),scale_to_try={scale_to_try},template_path='
+        print(f'[thread-{thread_name}] create_image_with_new_scale(),scale_to_try={scale_to_try},'
+              f'template_path='
               f'{template_path}')
         template_path_with_new_scale: Path = create_image_with_new_scale(template_path,
                                                                          scale_to_try)
@@ -593,16 +611,16 @@ def mouse_helper_move_image_relative(template_path: str,
         actions.user.display_warning_message(message)
         raise RuntimeError(message)
 
-    print(f'sorted_matches={sorted_matches}, type={type(sorted_matches)}')
+    print(f'[thread-{thread_name}] sorted_matches={sorted_matches}, type={type(sorted_matches)}')
     if disambiguator != 0:
         sorted_matches = sorted(sorted_matches, key=lambda m: (m.x, m.y))
-        print(f'sorted_matches by position={sorted_matches}')
+        print(f'[thread-{thread_name}] sorted_matches by position={sorted_matches}')
 
     else:
-        print(f'sorted_matches by best matching={sorted_matches}')
+        print(f'[thread-{thread_name}] sorted_matches by best matching={sorted_matches}')
 
     if len(sorted_matches) == 0:
-        print(f'scale_tries_left={scale_tries_left}')
+        print(f'[thread-{thread_name}] scale_tries_left={scale_tries_left}')
 
         if not scale_tries_left:
             if should_notify_message_if_fail:
@@ -611,9 +629,10 @@ def mouse_helper_move_image_relative(template_path: str,
                 actions.user.display_warning_message(message)
 
             raise RuntimeError(f"No matches for image {template_path}")
-        print(f'scale_tries_left remaining={scale_tries_left}, we will retry with scaling')
+        print(f'[thread-{thread_name}] scale_tries_left remaining={scale_tries_left}, '
+              f'we will retry with scaling')
         scale_to_try = scale_tries_left.pop(0)
-        print(f'scale_to_try={scale_to_try}')
+        print(f'[thread-{thread_name}] scale_to_try={scale_to_try}')
         mouse_helper_move_image_relative(template_path,
                                          disambiguator,
                                          threshold,
