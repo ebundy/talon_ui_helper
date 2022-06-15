@@ -1,8 +1,11 @@
 import concurrent.futures
 import concurrent.futures
 import concurrent.futures
+import concurrent.futures
+import concurrent.futures
 import threading
 import time
+from concurrent.futures import Executor
 from concurrent.futures import Future, as_completed
 from time import sleep
 from typing import Set
@@ -239,30 +242,41 @@ class MouseActions:
         # TODO For now the talon locate API doesn't provide the score of matches, so the best
         #  match feature is not still implementable
         template_paths: Set[str] = {template_path, template_path_2}
-        with concurrent.futures.ThreadPoolExecutor(max_workers=5, ) as executor:
-            futures_by_template: dict[Future, str] = {
-                    executor.submit(mouse_helper_move_image_relative, current_template,
-                                    disambiguator,
-                                    threshold,
-                                    xoffset,
-                                    yoffset,
-                                    gray_comparison,
-                                    region,
-                                    scale_tries_left=get_scale_tries_left_default()):
-                        current_template
-                    for current_template in template_paths}
+        is_matching = False
+        executor: Executor = concurrent.futures.ThreadPoolExecutor(max_workers=5, )
+        futures_by_template: dict[Future, str] = {
+                executor.submit(mouse_helper_move_image_relative, current_template,
+                                disambiguator,
+                                threshold,
+                                xoffset,
+                                yoffset,
+                                gray_comparison,
+                                region,
+                                scale_tries_left=get_scale_tries_left_default()):
+                    current_template
+                for current_template in template_paths}
+
         for f in as_completed(futures_by_template):
             try:
                 result = f.result()
+                print(f'we exit before all futures are completed because a matching was found:'
+                      f'{futures_by_template[f]}')
+                # return
+                is_matching = True
+                executor.shutdown(wait=False, cancel_futures=True)
                 return
+
             except Exception as e:
                 print(f'We have no matching for the template:{futures_by_template[f]}')
-
+        # if is_matching:
+        #     return
+        executor.shutdown(wait=False, cancel_futures=True)
+        print('We want to grit now!!!!!!!!!!!!!!!!!!!!!')
         message = f'All image matching have failed for images : ' \
                   f'{list(futures_by_template.values())}'
         print(message)
         actions.user.display_warning_message(message)
-        raise e
+        # raise e
         # except RuntimeError as e:
         #     message: str = f'we have no matching for ' \
         #                    f'the 2 templates' \
@@ -411,6 +425,7 @@ class MouseActions:
         """todo"""
         actions.user.mouse_helper_position_save()
 
+        start = time.time()
         actions.user.mouse_helper_move_images_relative(template_path_one,
                                                        template_path_two,
                                                        disambiguator,
@@ -420,6 +435,15 @@ class MouseActions:
                                                        gray_comparison,
                                                        None,
                                                        look_for_the_best_match)
+        end = time.time()
+        duration: float = end - start
+        print(f'FINAL:click_to_that_images_and_comeback() duration={duration}. Images '
+              f'{template_path_one}, '
+              f'{template_path_two}')
+        if duration >= 2:
+            actions.user.display_warning_message(f'click_to_that_images_and_comeback() too l'
+                                                 f'ong : {duration}s. '
+                                                 f'Images {template_path_one}, {template_path_two}')
 
         actions.sleep(0.5)
         actions.mouse_click(0)
@@ -435,6 +459,7 @@ class MouseActions:
                              gray_comparison: bool = False,
                              look_for_the_best_match: bool = False, ):
         """todo"""
+        start = time.time()
         actions.user.mouse_helper_move_images_relative(template_path_one,
                                                        template_path_two,
                                                        disambiguator,
@@ -444,6 +469,14 @@ class MouseActions:
                                                        gray_comparison,
                                                        None,
                                                        look_for_the_best_match)
+        end = time.time()
+        duration: float = end - start
+        print(f'FINAL:click_to_that_images() duration={duration}. Images {template_path_one}, '
+              f'{template_path_two}')
+        if duration >= 2:
+            actions.user.display_warning_message(f'click_to_that_images() too long : {duration}s. '
+                                                 f'Images {template_path_one}, {template_path_two}')
+
         actions.sleep(0.5)
         actions.mouse_click(0)
 
@@ -611,7 +644,9 @@ def mouse_helper_move_image_relative(template_path: str,
         actions.user.display_warning_message(message)
         raise RuntimeError(message)
 
-    print(f'[thread-{thread_name}] sorted_matches={sorted_matches}, type={type(sorted_matches)}')
+    print(f'[thread-{thread_name}] template_path_str={template_path_str}: ,scale_to_try='
+          f'{scale_to_try}, sorted_matches='
+          f'{sorted_matches}, type={type(sorted_matches)}')
     if disambiguator != 0:
         sorted_matches = sorted(sorted_matches, key=lambda m: (m.x, m.y))
         print(f'[thread-{thread_name}] sorted_matches by position={sorted_matches}')
@@ -666,8 +701,9 @@ def mouse_helper_move_image_relative(template_path: str,
             return
 
         match_rect = sorted_matches[disambiguator]
-
+    print('before should_move_mouse')
     if should_move_mouse:
         mouse_move(match_rect)
+    print('after should_move_mouse')
 
     return match_rect
