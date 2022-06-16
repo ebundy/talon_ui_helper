@@ -5,6 +5,7 @@ import concurrent.futures
 import concurrent.futures
 import threading
 import time
+import traceback
 from concurrent.futures import Executor
 from concurrent.futures import Future, as_completed
 from time import sleep
@@ -179,8 +180,9 @@ class MouseActions:
                                             yoffset: float = 0,
                                             gray_comparison: bool = False,
                                             region: Optional[TalonRect] = None,
-                                            should_use_cached_image: bool = False) -> List[
-        TalonRect]:
+                                            print_screen_temporary_file_talon: Image = None) -> \
+            List[
+                TalonRect]:
         """
         Finds all matches for the given image template within the given region.
 
@@ -197,7 +199,10 @@ class MouseActions:
         """
         thread_name: str = threading.current_thread().getName()
         if gray_comparison:
-            return compute_matches_with_gray(template_path, should_use_cached_image)
+            if not print_screen_temporary_file_talon:
+                raise ValueError(
+                        'The parameter print_screen_temporary_file_talon cannot be none here')
+            return compute_matches_with_gray(template_path, print_screen_temporary_file_talon)
 
         # and
         if region is None:
@@ -235,24 +240,30 @@ class MouseActions:
                                           threshold: float = 0.80,
                                           xoffset: float = 0,
                                           yoffset: float = 0,
+                                          # TODO gray comparison is not used any longer for now
                                           gray_comparison: bool = False,
                                           region: Optional[TalonRect] = None,
                                           look_for_the_best_match: bool = False):
         """todo"""
         # TODO For now the talon locate API doesn't provide the score of matches, so the best
         #  match feature is not still implementable
+        print_screen_temporary_file_talon: Image = None
+        if gray_comparison:
+            print_screen_temporary_file_talon = create_gray_image_of_print_screen()
         template_paths: Set[str] = {template_path, template_path_2}
         is_matching = False
         executor: Executor = concurrent.futures.ThreadPoolExecutor(max_workers=5, )
         futures_by_template: dict[Future, str] = {
-                executor.submit(mouse_helper_move_image_relative, current_template,
+                executor.submit(mouse_helper_move_image_relative,
+                                current_template,
                                 disambiguator,
                                 threshold,
                                 xoffset,
                                 yoffset,
                                 gray_comparison,
                                 region,
-                                scale_tries_left=get_scale_tries_left_default()):
+                                scale_tries_left=get_scale_tries_left_default(),
+                                print_screen_temporary_file_talon=print_screen_temporary_file_talon):
                     current_template
                 for current_template in template_paths}
 
@@ -267,7 +278,11 @@ class MouseActions:
                 return
 
             except Exception as e:
-                print(f'We have no matching for the template:{futures_by_template[f]}')
+                print(f'We have no matching for the template:{futures_by_template[f]}.\n'
+                      f'exception:{e}')
+                if 'we have no matching for' not in str(e):
+                    print(traceback.format_exc())
+
         # if is_matching:
         #     return
         executor.shutdown(wait=False, cancel_futures=True)
@@ -276,45 +291,6 @@ class MouseActions:
                   f'{list(futures_by_template.values())}'
         print(message)
         actions.user.display_warning_message(message)
-        # raise e
-        # except RuntimeError as e:
-        #     message: str = f'we have no matching for ' \
-        #                    f'the 2 templates' \
-        #                    f'' \
-        #                    f'image_1:{template_path}, ' \
-        #                    f'image_2:{template_path_2}'
-        #     actions.user.display_warning_message(message)
-        #     raise e
-
-        # mouse_helper_move_image_relative(template_path,
-        #                                  disambiguator,
-        #                                  threshold,
-        #                                  xoffset,
-        #                                  yoffset,
-        #                                  gray_comparison,
-        #                                  region,
-        #                                  scale_tries_left=get_scale_tries_left_default())
-
-        # print('the first image recognition failed,we will try another one', e)
-
-        # mouse_helper_move_image_relative(template_path_2,
-        #                                  disambiguator,
-        #                                  threshold,
-        #                                  xoffset,
-        #                                  yoffset,
-        #                                  gray_comparison,
-        #                                  region,
-        #                                  True,
-        #                                  scale_tries_left=get_scale_tries_left_default())
-
-    # except RuntimeError as e:
-    #     message: str = f'we have no matching for ' \
-    #                    f'the 2 templates' \
-    #                    f'' \
-    #                    f'image_1:{template_path}, ' \
-    #                    f'image_2:{template_path_2}'
-    #     actions.user.display_warning_message(message)
-    #     raise e
 
     def mouse_helper_blob_picker(bounding_rectangle: TalonRect, min_gap_size: int = 5):
         """
@@ -369,7 +345,8 @@ class MouseActions:
                                          yoffset,
                                          gray_comparison,
                                          region,
-                                         scale_tries_left=get_scale_tries_left_default())
+                                         scale_tries_left=get_scale_tries_left_default(),
+                                         )
 
     def click_to_that_image(template_path: str,
                             disambiguator: Union[int, str] = 0,
@@ -487,31 +464,57 @@ class MouseActions:
 # xoffset: float = 0,
 # yoffset: float = 0,
 # region: Optional[TalonRect] = None
-
-def compute_matches_with_gray(template_image_to_find: str, should_use_cached_image: bool) -> List[
-    TalonRect]:
+def create_gray_image_of_print_screen() -> Image:
+    thread_name: str = threading.current_thread().getName()
+    print(f'[thread-{thread_name}] create_gray_image_of_print_screen()')
     from PIL import ImageGrab
     from PIL import Image as Image_pil
     print_screen_temporary_file: Path = actions.user.get_talon_user_template_temporary_path() / \
-                                        'print_screen_temporary_file.png'
-    print_screen_temporary_file_talon: Image = None
-    if not should_use_cached_image:
-        actions.key("printscr")
-        sleep(0.5)
-        print_screen_image: Image_pil = ImageGrab.grabclipboard()
-        print(f'print_screen_image={print_screen_image}')
-        print_screen_temporary_file_talon = \
-            convert_pill_image_into_gray_scale_and_then_convert_into_talon_image(
-                    print_screen_image,
-                    print_screen_temporary_file)
+                                        f'print_screen_temporary_file.png'
 
-    else:
-        print(f'Use cached image')
-        print_screen_temporary_file_talon = Image.from_file(path=print_screen_temporary_file)
+    print_screen_temporary_file_talon: Image = None
+    actions.key("printscr")
+    sleep(0.5)
+    print_screen_image: Image_pil = ImageGrab.grabclipboard()
+    # print(f'print_screen_image={print_screen_image}')
+    print_screen_temporary_file_talon = \
+        convert_pill_image_into_gray_scale_and_then_convert_into_talon_image(
+                print_screen_image,
+                print_screen_temporary_file)
+    return print_screen_temporary_file_talon
+
+
+def compute_matches_with_gray(template_image_to_find: str,
+                              print_screen_temporary_file_talon: Image) -> List[
+    TalonRect]:
+    thread_name: str = threading.current_thread().getName()
+    # from PIL import ImageGrab
+    # from PIL import Image as Image_pil
+    # print_screen_temporary_file: Path = actions.user.get_talon_user_template_temporary_path() / \
+    #                                     f'print_screen_temporary_file.png'
+    #
+    # print_screen_temporary_file_talon: Image = None
+    # if not should_use_cached_image:
+    #     actions.key("printscr")
+    #     sleep(0.5)
+    #     print_screen_image: Image_pil = ImageGrab.grabclipboard()
+    #     print(f'print_screen_image={print_screen_image}')
+    #     print_screen_temporary_file_talon = \
+    #         convert_pill_image_into_gray_scale_and_then_convert_into_talon_image(
+    #                 print_screen_image,
+    #                 print_screen_temporary_file)
+    #
+    # else:
+    #     print(f'[thread-{thread_name}]Use cached image')
+    #     print_screen_temporary_file_talon = Image.from_file(path=print_screen_temporary_file)
 
     template_file = os.path.join(get_image_template_directory(), template_image_to_find)
     template_temporary_file: Path = actions.user.get_talon_user_template_temporary_path() / \
-                                    'template_temporary_file.png'
+                                    f'template_temporary_file_' \
+                                    f'{Path(template_image_to_find).name}'
+
+    print(f'[thread-{thread_name}]template_temporary_file={template_temporary_file} for gray '
+          f'comparison')
     template_image_talon: Image = \
         convert_pill_image_into_gray_scale_and_then_convert_into_talon_image(
                 Image_pil.open(template_file),
@@ -520,7 +523,7 @@ def compute_matches_with_gray(template_image_to_find: str, should_use_cached_ima
     matches = [match for match in locate.locate_in_image(print_screen_temporary_file_talon,
                                                          template_image_talon,
                                                          threshold=0.8)]
-    print(f'matches={matches}')
+    print(f'[thread-{thread_name}]matches for compute_matches_with_gray()={matches}')
     return matches
 
 
@@ -560,7 +563,7 @@ def create_image_with_new_scale(template_path: str, scale_to_try: float) -> Path
         im_resized: Image = im.resize((width, height), resample=LANCZOS)
         scale_temporary_file: Path = actions.user.get_talon_user_template_temporary_path() \
                                      / \
-                                     'scale_temporary_file.png'
+                                     f'scale_temporary_file_{Path(template_path).name}'
         im_resized.save(scale_temporary_file, quality=95)
         print(f'scale_temporary_file={scale_temporary_file}')
         end = time.time()
@@ -581,7 +584,9 @@ def mouse_helper_move_image_relative(template_path: str,
                                      should_move_mouse: bool = True,
                                      scale_tries_left: List[float] = None,
                                      scale_to_try: float = 1,
-                                     should_notify_message_if_fail=False) -> List[TalonRect]:
+                                     should_notify_message_if_fail=False,
+                                     print_screen_temporary_file_talon: Image = None) -> List[
+    TalonRect]:
     """'
     Moves the mouse relative to the template image given in template_path.
 
@@ -605,12 +610,15 @@ def mouse_helper_move_image_relative(template_path: str,
         active screen.
     """
     thread_name: str = threading.current_thread().getName()
+    if gray_comparison and not print_screen_temporary_file_talon:
+        print_screen_temporary_file_talon = create_gray_image_of_print_screen()
 
     print(f'[thread-{thread_name}] mouse_helper_move_image_relative() with template_path='
           f'{template_path}, '
           f'disambiguator={disambiguator}, xoffset={xoffset}, yoffset={yoffset}, '
           f'region={region}, threshold={threshold},gray_comparison={gray_comparison},'
-          f'scale_to_try={scale_to_try},scale_tries_left={scale_tries_left}')
+          f'scale_to_try={scale_to_try},scale_tries_left={scale_tries_left},'
+          f'print_screen_temporary_file_talon={print_screen_temporary_file_talon}')
 
     if region is None:
         rect = actions.user.mouse_helper_calculate_relative_rect("0 0 -0 -0", "active_screen")
@@ -629,13 +637,14 @@ def mouse_helper_move_image_relative(template_path: str,
     else:
         template_path_str = template_path
 
+    print(f'print_screen_temporary_file_talon={print_screen_temporary_file_talon}')
     sorted_matches = actions.user.mouse_helper_find_template_relative(template_path_str,
                                                                       threshold,
                                                                       xoffset,
                                                                       yoffset,
                                                                       gray_comparison,
                                                                       rect,
-                                                                      should_use_cached_image)
+                                                                      print_screen_temporary_file_talon=print_screen_temporary_file_talon)
     if len(sorted_matches) > 15:
         message: str = f'we have too much matching ({len(sorted_matches)})for ' \
                        f'the ' \
@@ -679,7 +688,8 @@ def mouse_helper_move_image_relative(template_path: str,
                                          should_move_mouse,
                                          scale_tries_left,
                                          scale_to_try,
-                                         should_notify_message_if_fail=should_notify_message_if_fail)
+                                         should_notify_message_if_fail=should_notify_message_if_fail,
+                                         print_screen_temporary_file_talon=print_screen_temporary_file_talon)
 
     if disambiguator in ("mouse", "mouse_cycle"):
         # math.ceil is needed here to ensure we only look at pixels after the current
