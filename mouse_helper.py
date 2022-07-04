@@ -230,12 +230,17 @@ class MouseActions:
         full_template_path: Path = Path(template_file)
         start = time.time()
         # print_screen_temporary_file_talon
-        matches = [Rectangle(match.x + xoffset, match.y + yoffset, match.width, match.height)
 
-                   for match in template_matching_service.check_input_for_template(
-                        print_screen_temporary_file_talon,
-                        full_template_path,
-                        threshold).matching_rectangles]
+        try:
+            matches = [Rectangle(match.x + xoffset, match.y + yoffset, match.width, match.height)
+
+                       for match in template_matching_service.check_input_for_template(
+                            print_screen_temporary_file_talon,
+                            full_template_path,
+                            threshold).matching_rectangles]
+        except Exception as e:
+            actions.user.display_warning_message(str(e))
+
         # locate.locate(template_file, rect=rect,  # threshold=0.900,
         #                                       # threshold=0.800
         #                                       threshold=threshold)]
@@ -671,6 +676,11 @@ def mouse_helper_move_image_relative(template_path: str,
         rect = region
     # print(f'rect={rect}, type={type(rect)}')
     print(f'[thread-{thread_name}] scale_to_try={scale_to_try}')
+    if isinstance(disambiguator, str) and disambiguator not in ("mouse", "mouse_cycle"):
+        message = 'The disambiguator parameter is a string but it doesn\'t have an allowed value'
+        actions.user.display_warning_message(message)
+        raise ValueError(message)
+
     if scale_to_try != 1:
         print(f'[thread-{thread_name}] create_image_with_new_scale(),scale_to_try={scale_to_try},'
               f'template_path='
