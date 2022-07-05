@@ -30,7 +30,7 @@ from talon.skia import Image
 from talon.types import Rect as TalonRect
 
 from .blob_detector import calculate_blob_rects
-from ..knausj_talon.dave.template_matching.Rectangle import Rectangle
+from ..knausj_talon.dave.template_matching.MatchingRectangle import MatchingRectangle
 from ..knausj_talon.dave.template_matching import template_matching_service
 
 mod = Module()
@@ -187,7 +187,7 @@ class MouseActions:
                                             region: Optional[TalonRect] = None,
                                             ) -> \
             List[
-                TalonRect]:
+                MatchingRectangle]:
         """
         Finds all matches for the given image template within the given region.
 
@@ -232,27 +232,21 @@ class MouseActions:
         # print_screen_temporary_file_talon
 
         try:
-            matches = [Rectangle(match.x + xoffset, match.y + yoffset, match.width, match.height)
+            matches = [MatchingRectangle(match.x + xoffset,
+                                         match.y + yoffset,
+                                         match.width,
+                                         match.height)
 
                        for match in template_matching_service.check_input_for_template(
                             print_screen_temporary_file_talon,
                             full_template_path,
                             threshold).matching_rectangles]
         except Exception as e:
+            print(traceback.format_exc())
             actions.user.display_warning_message(str(e))
 
-        # locate.locate(template_file, rect=rect,  # threshold=0.900,
-        #                                       # threshold=0.800
-        #                                       threshold=threshold)]
-        # for match in locate.locate_in_image(template_file, rect=rect,  # threshold=0.900,
-        #                            threshold=0.800
-        # threshold=threshold)]
         end = time.time()
         print(f'[thread-{thread_name}] duration=' + str(end - start) + ' for locate.locate() ')
-        # pil_Image.from
-        # def from_file(cls, path, subset: Any | None = ...): ...
-
-        # locate.locate_in_image()
         return matches
 
     def mouse_helper_move_images_relative(template_path: str,
@@ -693,14 +687,15 @@ def mouse_helper_move_image_relative(template_path: str,
         template_path_str = template_path
 
     print(f'print_screen_temporary_file_talon={print_screen_temporary_file_talon}')
-    sorted_matches = actions.user.mouse_helper_find_template_relative(template_path_str,
-                                                                      print_screen_temporary_file_talon,
-                                                                      threshold,
-                                                                      xoffset,
-                                                                      yoffset,
-                                                                      gray_comparison,
-                                                                      rect,
-                                                                      )
+    sorted_matches: List[MatchingRectangle] = actions.user.mouse_helper_find_template_relative(
+            template_path_str,
+            print_screen_temporary_file_talon,
+            threshold,
+            xoffset,
+            yoffset,
+            gray_comparison,
+            rect,
+    )
     if len(sorted_matches) > 15:
         message: str = f'we have too many matching ({len(sorted_matches)})for ' \
                        f'the ' \
@@ -718,6 +713,7 @@ def mouse_helper_move_image_relative(template_path: str,
 
     else:
         print(f'[thread-{thread_name}] sorted_matches by best matching={dir(sorted_matches)}')
+        # sorted_matches.sort(key=lambda x: x.matching_result(), reverse=True)
 
     if len(sorted_matches) == 0:
         print(f'[thread-{thread_name}] scale_tries_left={scale_tries_left}')
