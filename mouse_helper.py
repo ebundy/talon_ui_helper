@@ -13,7 +13,7 @@ from typing import Set
 
 import PIL
 from PIL import ImageGrab
-from PIL.Image import Image, LANCZOS
+from PIL.Image import Image, Resampling
 
 """
 Useful actions related to moving the mouse
@@ -244,6 +244,7 @@ class MouseActions:
         except Exception as e:
             print(traceback.format_exc())
             actions.user.display_warning_message(str(e))
+            raise e
 
         end = time.time()
         print(f'[thread-{thread_name}] duration=' + str(end - start) + ' for locate.locate() ')
@@ -326,14 +327,20 @@ class MouseActions:
 
         actions.user.marker_ui_show(rects)
 
+    #
+    #             matches = actions.user.move_image_relative(template_path,
+    #                                                        disambiguator=0,
+    #                                                        threshold=threshold,
+    #                                                        should_move_mouse=False)
     def move_image_relative(template_path: str,
                             disambiguator: Union[int, str] = 0,
                             threshold: float = 0.80,
                             xoffset: int = 0,
                             yoffset: int = 0,
                             gray_comparison: bool = False,
-                            region: Optional[TalonRect] = None
-                            ) -> List[TalonRect]:
+                            region: Optional[TalonRect] = None,
+                            should_move_mouse: bool = True,
+                            ) -> MatchingRectangle:
         """'
         Moves the mouse relative to the template image given in template_path.
 
@@ -356,15 +363,18 @@ class MouseActions:
             TalonRect (see mouse_helper_calculate_relative_rect) or None to just use the
             active screen.
         """
-        mouse_helper_move_image_relative(template_path,
-                                         disambiguator,
-                                         threshold,
-                                         xoffset,
-                                         yoffset,
-                                         gray_comparison,
-                                         region,
-                                         scale_tries_left=get_scale_tries_left_default(),
-                                         )
+        print_screen = create_image_of_print_screen()
+        return mouse_helper_move_image_relative(template_path,
+                                                print_screen,
+                                                disambiguator,
+                                                threshold,
+                                                xoffset,
+                                                yoffset,
+                                                gray_comparison,
+                                                region,
+                                                scale_tries_left=get_scale_tries_left_default(),
+                                                should_move_mouse=should_move_mouse
+                                                )
 
     def click_to_that_image(template_path: str,
                             disambiguator: Union[int, str] = 0,
@@ -603,7 +613,7 @@ def create_image_with_new_scale(template_path: str, scale_to_try: float) -> Path
         (width, height) = (int(im.width * scale_to_try), int(im.height * scale_to_try))
         print(f'(width, height)={(width, height)}')
 
-        im_resized: Image = im.resize((width, height), resample=LANCZOS, reducing_gap=3)
+        im_resized: Image = im.resize((width, height), resample=Resampling.LANCZOS, reducing_gap=3)
         scale_temporary_file: Path = actions.user.get_talon_user_template_temporary_path() \
                                      / \
                                      f'scale_temporary_file_{Path(template_path).name}'
@@ -629,8 +639,7 @@ def mouse_helper_move_image_relative(template_path: str,
                                      scale_tries_left: List[float] = None,
                                      scale_to_try: float = 1,
                                      should_notify_message_if_fail=False,
-                                     ) -> List[
-    TalonRect]:
+                                     ) -> MatchingRectangle:
     """'
     Moves the mouse relative to the template image given in template_path.
 
@@ -709,10 +718,11 @@ def mouse_helper_move_image_relative(template_path: str,
           f'{len(sorted_matches)}, type={type(sorted_matches)}')
     if disambiguator != 0:
         sorted_matches = sorted(sorted_matches, key=lambda m: (m.x, m.y))
-        print(f'[thread-{thread_name}] sorted_matches by position={len(sorted_matches)}')
+        print(f'[thread-{thread_name}] sorted_matches by position={len(sorted_matches)} results')
 
     else:
-        print(f'[thread-{thread_name}] sorted_matches by best matching={dir(sorted_matches)}')
+        print(f'[thread-{thread_name}] sorted_matches by best matching={len(sorted_matches)} '
+              f'results')
         # sorted_matches.sort(key=lambda x: x.matching_result(), reverse=True)
 
     if len(sorted_matches) == 0:
@@ -763,10 +773,11 @@ def mouse_helper_move_image_relative(template_path: str,
         if len(sorted_matches) <= disambiguator:
             return
 
-        match_rect = sorted_matches[disambiguator]
+    match_rect = sorted_matches[disambiguator]
     print('before should_move_mouse')
+    # print(f'match_rect={match_rect}')
     if should_move_mouse:
         mouse_move(match_rect)
     print('after should_move_mouse')
-
+    # print(f' match_rect={match_rect}')
     return match_rect
