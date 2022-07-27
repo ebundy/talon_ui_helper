@@ -11,6 +11,7 @@ from talon import Module, actions
 mod = Module()
 
 
+# TODO Beware: actually this function is not used any longer 
 def has_match_images(template_path: str,
                      threshold: float,
                      other_template_path: str = None,
@@ -51,42 +52,34 @@ class UserActions:
                                      disambiguator: Union[int, str] = 0,
                                      threshold: float = 0.80,
                                      xoffset: float = 0,
-                                     yoffset: float = 0, gray_comparison: bool = False,
+                                     yoffset: float = 0,
+                                     gray_comparison: bool = False,
+                                     scroll_down_amount: float = 1,
                                      other_template_path: str = None):
         """todo"""
         current_position: Tuple[int, int] = ctrl.mouse_pos()
-        saved_mouse_pos = (actions.mouse_x(), actions.mouse_y())
+        # saved_mouse_pos = (actions.mouse_x(), actions.mouse_y())
         print(f'current_position={current_position}')
-        # print(f'saved_mouse_pos={saved_mouse_pos}')
 
+        should_find_lower_than_position = True
         for i in range(2):
             try:
-                #     def mouse_helper_move_images_relative(template_path: str,
-                #                                           template_path_2: str,
-                #                                           print_screen: Path,
-                #                                           disambiguator: Union[int, str] = 0,
-                #                                           threshold: float = 0.80,
-                #                                           xoffset: int = 0,
-                #                                           yoffset: int = 0,
-                #                                           # TODO gray comparison is not used 
-                #                                            any longer for now
-                #                                           gray_comparison: bool = False,
-                #                                           region: Optional[TalonRect] = None,1
                 actions.user.move_image_relative(template_path, disambiguator,
                                                  xoffset=xoffset,
                                                  yoffset=yoffset, region=None,
                                                  gray_comparison=gray_comparison,
                                                  threshold=threshold,
                                                  current_position=current_position,
-                                                 should_find_lower_than_position=True)
+                                                 should_find_lower_than_position=should_find_lower_than_position)
                 actions.sleep(0.5)
                 actions.mouse_click(0)
                 return
             except RuntimeError as e:
                 raise_exception_if_not_matching_image_problem(e)
-                actions.user.mouse_scroll_down(1)
+                actions.user.mouse_scroll_down(scroll_down_amount)
                 sleep(1)
-                current_position = ctrl.mouse_pos()
+                should_find_lower_than_position = False
+                # current_position = ctrl.mouse_pos()
         raise RuntimeError(f'No match for image={template_path} after 8 tries')
 
 
