@@ -59,7 +59,8 @@ def handle_image_click_builder(result):
         offset_bit = ", ".join([""] + list(map(lambda x: str(int(x)), result["offset"])))
 
     command = "\n".join([
-            # f'    user.click_to_that_image("{directory_output_without_templates_suffix}/{filename}", 0, 0.8)',
+            # f'    user.click_to_that_image("{directory_output_without_templates_suffix}/{
+            # filename}", 0, 0.8)',
             f'{directory_output_without_templates_suffix}/{filename}',
     ])
     print('hander')
@@ -119,7 +120,8 @@ def handle_blob_detect_builder(result):
     command = "\n".join([
             "",
             ":",
-            f'    bounding_rectangle = user.mouse_helper_calculate_relative_rect("{offsets}", "active_window")',
+            f'    bounding_rectangle = user.mouse_helper_calculate_relative_rect("{offsets}", '
+            f'"active_window")',
             f'    user.mouse_helper_blob_picker(bounding_rectangle)',
     ])
     actions.clip.set_text(command)
@@ -157,7 +159,8 @@ command_wizards = [
                 BlobBoxOverlay,
                 handle_blob_detect_builder,
                 (
-                        "Select a region of the active window to use in your voice command then press "
+                        "Select a region of the active window to use in your voice command then "
+                        "press "
                         "enter to confirm your selection. Press escape to cancel.\n\n"
                         "When drawing a box wider than tall, the first row of pixels will be "
                         "considered background color. When the box is taller than wide the first "
