@@ -340,7 +340,7 @@ class MouseActions:
                             gray_comparison: bool = False,
                             region: Optional[TalonRect] = None,
                             should_move_mouse: bool = True,
-                            should_fail_if_not_found: bool = True,
+                            should_notify_message_if_fail: bool = True,
                             current_position: Tuple[int, int] = None,
                             should_find_lower_than_position: bool = False
                             ) -> MatchingRectangle:
@@ -379,10 +379,12 @@ class MouseActions:
                                                     scale_tries_left=get_scale_tries_left_default(),
                                                     should_move_mouse=should_move_mouse,
                                                     current_position=current_position,
-                                                    should_find_lower_than_position=should_find_lower_than_position
+                                                    should_find_lower_than_position=should_find_lower_than_position,
+                                                    should_notify_message_if_fail=should_notify_message_if_fail,
                                                     )
         logger.info(f'[mouse_helper]matching={matching}')
-        if not matching and should_fail_if_not_found:
+        # if not matching:
+        if not matching and should_notify_message_if_fail:
             raise RuntimeError(f"No matches for image {template_path}")
 
         return matching
@@ -393,7 +395,7 @@ class MouseActions:
                             xoffset: int = 0,
                             yoffset: int = 0,
                             gray_comparison: bool = False,
-                            should_fail_if_not_found: bool = True,
+                            should_notify_message_if_fail: bool = True,
                             region: Optional[TalonRect] = None) -> bool:
         """todo"""
 
@@ -409,12 +411,16 @@ class MouseActions:
                                                                gray_comparison,
                                                                region,
                                                                scale_tries_left=get_scale_tries_left_default(),
-                                                               should_notify_message_if_fail=True,
-                                                               should_fail_if_not_found=should_fail_if_not_found)
+                                                               should_notify_message_if_fail=should_notify_message_if_fail,
+                                                               )
         if matching_rectangles:
             actions.sleep(0.5)
             actions.mouse_click(0)
             return True
+
+        elif not matching_rectangles and should_notify_message_if_fail:
+            # print('Blab blah labra')
+            raise RuntimeError(f"No matches for image {template_path}")
 
         return False
 
@@ -625,7 +631,6 @@ def mouse_helper_move_image_relative(template_path: str,
                                      scale_tries_left: List[float] = None,
                                      scale_to_try: float = 1,
                                      should_notify_message_if_fail=False,
-                                     should_fail_if_not_found: bool = True,
                                      current_position: Tuple[int, int] = None,
                                      should_find_lower_than_position: bool = False,
 
@@ -661,8 +666,8 @@ def mouse_helper_move_image_relative(template_path: str,
                 f'disambiguator={disambiguator}, xoffset={xoffset}, yoffset={yoffset}, '
                 f'region={region}, threshold={threshold},gray_comparison={gray_comparison},'
                 f'scale_to_try={scale_to_try},scale_tries_left={scale_tries_left},'
-                f'print_screen_temporary_file_talon={print_screen_temporary_file_talon}'
-                f'should_fail_if_not_found={should_fail_if_not_found}')
+                f'print_screen_temporary_file_talon={print_screen_temporary_file_talon},'
+                f'should_notify_message_if_fail={should_notify_message_if_fail}')
 
     if region is None:
         rect = actions.user.mouse_helper_calculate_relative_rect("0 0 -0 -0", "active_screen")
@@ -747,9 +752,10 @@ def mouse_helper_move_image_relative(template_path: str,
                 message: str = f'No matches for image ' \
                                f'the image:{template_path}'
                 actions.user.display_warning_message(message)
-
-            if should_fail_if_not_found:
                 raise RuntimeError(f"No matches for image {template_path}")
+            else:
+                logger.info(f'No matches for image {template_path}')
+                return None
         logger.info(f'{get_prefix_for_logging()}[mouse_helper_move_image_relative] '
                     f'scale_tries_lef'
                     f't remaining={scale_tries_left}, '
@@ -770,7 +776,6 @@ def mouse_helper_move_image_relative(template_path: str,
                                                 scale_tries_left,
                                                 scale_to_try,
                                                 should_notify_message_if_fail=should_notify_message_if_fail,
-                                                should_fail_if_not_found=should_fail_if_not_found,
                                                 current_position=current_position,
                                                 should_find_lower_than_position=should_find_lower_than_position
                                                 )
