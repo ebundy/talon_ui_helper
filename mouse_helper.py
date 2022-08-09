@@ -294,14 +294,19 @@ class MouseActions:
         for f in as_completed(futures_by_template):
             try:
                 result = f.result()
-                logger.info(f'[mouse_helper]we exit before all futures are completed because a '
-                            f'matching was '
-                            f'found:'
-                            f'{futures_by_template[f]}')
-                # return
+                if result:
+                    logger.info(f'[mouse_helper]**********FINAL************ we exit before all futures '
+                                f'are '
+                                f'completed because a '
+                                f'matching was '
+                                f'found:'
+                                f'{futures_by_template[f]}'
+                                f'result={result}'
+                                )
+                    # return
 
-                executor.shutdown(wait=False, cancel_futures=True)
-                return True
+                    executor.shutdown(wait=False, cancel_futures=True)
+                    return True
 
             except Exception as e:
                 logger.error(f'[mouse_helper]We have no matching for t'
@@ -312,10 +317,12 @@ class MouseActions:
                     logger.error(traceback.format_exc())
 
         executor.shutdown(wait=False, cancel_futures=True)
+
         message = f'All image matching have failed for images : ' \
                   f'{list(futures_by_template.values())}'
         logger.info('[mouse_helper]' + message)
-        actions.user.display_warning_message(message)
+        if should_notify_message_if_fail:
+            actions.user.display_warning_message(message)
         return False
 
     def mouse_helper_blob_picker(bounding_rectangle: TalonRect, min_gap_size: int = 5):
@@ -504,7 +511,7 @@ class MouseActions:
                              yoffset: int = 0,
                              gray_comparison: bool = False,
                              should_notify_message_if_fail: bool = False,
-                             look_for_the_best_match: bool = False):
+                             look_for_the_best_match: bool = False) -> bool:
         """todo"""
         print_screen = create_gray_image_of_print_screen() if gray_comparison else \
             create_image_of_print_screen()
@@ -521,17 +528,17 @@ class MouseActions:
                                                                         )
         end = time.time()
         duration: float = end - start
-        logger.info(f'[mouse_helper]FINAL:click_to_that_images() duration={duration}. Images '
-                    f'{template_path_one}, '
-                    f'{template_path_two}')
+        logger.info(f'[mouse_helper] END:click_to_that_images() duration={duration}. Images '
+                    f'{template_path_one}, {template_path_two}, is_match={is_match}')
         if duration >= 2:
             actions.user.display_warning_message(f'click_to_that_images() too long : {duration}s. '
                                                  f'Images {template_path_one}, {template_path_two}')
 
         if not is_match:
-            return
+            return False
         actions.sleep(0.5)
         actions.mouse_click(0)
+        return True
 
 
 def create_image_of_print_screen() -> Path:
