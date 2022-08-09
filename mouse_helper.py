@@ -342,7 +342,8 @@ class MouseActions:
                             should_move_mouse: bool = True,
                             should_notify_message_if_fail: bool = True,
                             current_position: Tuple[int, int] = None,
-                            should_find_lower_than_position: bool = False
+                            should_find_lower_than_position: bool = False,
+                            max_x_position: float = None,
                             ) -> MatchingRectangle:
         """'
         Moves the mouse relative to the template image given in template_path.
@@ -381,6 +382,7 @@ class MouseActions:
                                                     current_position=current_position,
                                                     should_find_lower_than_position=should_find_lower_than_position,
                                                     should_notify_message_if_fail=should_notify_message_if_fail,
+                                                    max_x_position=max_x_position
                                                     )
         logger.info(f'[mouse_helper]matching={matching}')
         # if not matching:
@@ -633,7 +635,7 @@ def mouse_helper_move_image_relative(template_path: str,
                                      should_notify_message_if_fail=False,
                                      current_position: Tuple[int, int] = None,
                                      should_find_lower_than_position: bool = False,
-
+                                     max_x_position: float = None
                                      ) -> Union[List[MatchingRectangle], None, MatchingRectangle]:
     """'
     Moves the mouse relative to the template image given in template_path.
@@ -667,7 +669,9 @@ def mouse_helper_move_image_relative(template_path: str,
                 f'region={region}, threshold={threshold},gray_comparison={gray_comparison},'
                 f'scale_to_try={scale_to_try},scale_tries_left={scale_tries_left},'
                 f'print_screen_temporary_file_talon={print_screen_temporary_file_talon},'
-                f'should_notify_message_if_fail={should_notify_message_if_fail}')
+                f'should_notify_message_if_fail={should_notify_message_if_fail}'
+                f'max_x_position={max_x_position}'
+                )
 
     if region is None:
         rect = actions.user.mouse_helper_calculate_relative_rect("0 0 -0 -0", "active_screen")
@@ -709,6 +713,11 @@ def mouse_helper_move_image_relative(template_path: str,
             yoffset=yoffset,
             gray_comparison=gray_comparison,
     )
+    if max_x_position:
+        logger.info(f' sorted_matches before max_x_position filtering={sorted_matches}')
+        sorted_matches = [s for s in sorted_matches if s.x <= max_x_position]
+        logger.info(f' sorted_matches after max_x_position filtering={sorted_matches}')
+        # return
     if len(sorted_matches) > 15:
         message: str = f'we have too many matching ({len(sorted_matches)})for ' \
                        f'the ' \
@@ -777,7 +786,8 @@ def mouse_helper_move_image_relative(template_path: str,
                                                 scale_to_try,
                                                 should_notify_message_if_fail=should_notify_message_if_fail,
                                                 current_position=current_position,
-                                                should_find_lower_than_position=should_find_lower_than_position
+                                                should_find_lower_than_position=should_find_lower_than_position,
+                                                max_x_position=max_x_position
                                                 )
 
     if disambiguator in ("mouse", "mouse_cycle"):

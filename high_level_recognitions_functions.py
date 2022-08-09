@@ -55,14 +55,15 @@ class UserActions:
                                      yoffset: float = 0,
                                      gray_comparison: bool = False,
                                      scroll_down_amount: float = 1,
-                                     other_template_path: str = None):
+                                     other_template_path: str = None,
+                                     max_x_position: float = None):
         """todo"""
         current_position: Tuple[int, int] = ctrl.mouse_pos()
         # saved_mouse_pos = (actions.mouse_x(), actions.mouse_y())
         print(f'current_position={current_position}')
 
         should_find_lower_than_position = True
-        for i in range(2):
+        for i in range(3):
             try:
                 actions.user.move_image_relative(template_path, disambiguator,
                                                  xoffset=xoffset,
@@ -70,7 +71,8 @@ class UserActions:
                                                  gray_comparison=gray_comparison,
                                                  threshold=threshold,
                                                  current_position=current_position,
-                                                 should_find_lower_than_position=should_find_lower_than_position)
+                                                 should_find_lower_than_position=should_find_lower_than_position,
+                                                 max_x_position=max_x_position)
                 actions.sleep(0.5)
                 actions.mouse_click(0)
                 return
