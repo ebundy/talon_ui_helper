@@ -264,6 +264,7 @@ class MouseActions:
                                           # TODO gray comparison is not used any longer for now
                                           gray_comparison: bool = False,
                                           region: Optional[TalonRect] = None,
+                                          should_notify_message_if_fail: bool = False,
                                           look_for_the_best_match: bool = False) -> bool:
         """todo"""
         # TODO For now the talon locate API doesn't provide the score of matches, so the best
@@ -285,6 +286,7 @@ class MouseActions:
                                 gray_comparison,
                                 region,
                                 scale_tries_left=get_scale_tries_left_default(),
+                                should_notify_message_if_fail=should_notify_message_if_fail
                                 ):
                     current_template
                 for current_template in template_paths}
@@ -501,7 +503,8 @@ class MouseActions:
                              xoffset: int = 0,
                              yoffset: int = 0,
                              gray_comparison: bool = False,
-                             look_for_the_best_match: bool = False, ):
+                             should_notify_message_if_fail: bool = False,
+                             look_for_the_best_match: bool = False):
         """todo"""
         print_screen = create_gray_image_of_print_screen() if gray_comparison else \
             create_image_of_print_screen()
@@ -514,6 +517,7 @@ class MouseActions:
                                                                         xoffset,
                                                                         yoffset,
                                                                         gray_comparison=gray_comparison,
+                                                                        should_notify_message_if_fail=should_notify_message_if_fail
                                                                         )
         end = time.time()
         duration: float = end - start
