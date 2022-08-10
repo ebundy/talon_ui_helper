@@ -407,7 +407,8 @@ class MouseActions:
                             yoffset: int = 0,
                             gray_comparison: bool = False,
                             should_notify_message_if_fail: bool = True,
-                            region: Optional[TalonRect] = None) -> bool:
+                            max_x_position: float = None,
+                            ) -> bool:
         """todo"""
 
         print_screen = create_gray_image_of_print_screen() if gray_comparison else \
@@ -420,7 +421,7 @@ class MouseActions:
                                                                xoffset,
                                                                yoffset,
                                                                gray_comparison,
-                                                               region,
+                                                               max_x_position=max_x_position,
                                                                scale_tries_left=get_scale_tries_left_default(),
                                                                should_notify_message_if_fail=should_notify_message_if_fail,
                                                                )
