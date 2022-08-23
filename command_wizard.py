@@ -5,6 +5,7 @@ Actions related to building voice commands.
 import datetime
 import os
 
+import pyperclip as pyperclip
 from talon import Module, Context, actions, ui, imgui
 
 # from mouse_helper import *
@@ -64,7 +65,9 @@ def handle_image_click_builder(result):
             f'{directory_output_without_templates_suffix}/{filename}',
     ])
     print('hander')
-    actions.clip.set_text(command)
+
+    pyperclip.copy(command)
+    actions.user.clipboard_add_item(command)
     actions.app.notify("Copied new command to clipboard")
 
 
