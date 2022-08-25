@@ -11,42 +11,42 @@ from talon import Module, actions
 mod = Module()
 
 
-# TODO Beware: actually this function is not used any longer 
-def has_match_images(template_path: str,
-                     threshold: float,
-                     other_template_path: str = None,
-                     gray_comparison: bool = False) -> bool:
-    """todo"""
-    try:
-        matches = actions.user.move_image_relative(template_path,
-                                                   disambiguator=0,
-                                                   threshold=threshold,
-                                                   should_move_mouse=False,
-                                                   gray_comparison=gray_comparison)
-        print(f' first try : matches={matches}')
-        return matches is not None
-
-    except RuntimeError as e:
-        raise_exception_if_not_matching_image_problem(e)
-        if not other_template_path:
-            return False
-
-        try:
-
-            matches = actions.user.move_image_relative(other_template_path,
-                                                       disambiguator=0,
-                                                       threshold=threshold,
-                                                       should_move_mouse=False)
-            print(f'second try : matches={matches}')
-            return matches is not None
-        except RuntimeError as e:
-            raise_exception_if_not_matching_image_problem(e)
-            return False
-
-
 # own user actions
 @mod.action_class
 class UserActions:
+
+    def has_match_images(template_path: str,
+                         threshold: float,
+                         other_template_path: str = None,
+                         gray_comparison: bool = False) -> bool:
+        """todo"""
+        try:
+            matches = actions.user.move_image_relative(template_path,
+                                                       disambiguator=0,
+                                                       threshold=threshold,
+                                                       should_move_mouse=False,
+                                                       gray_comparison=gray_comparison,
+                                                       should_notify_message_if_fail=True)
+            print(f'has_match_images(): first try : matches={matches}')
+            return matches is not None
+
+        except RuntimeError as e:
+            raise_exception_if_not_matching_image_problem(e)
+            if not other_template_path:
+                return False
+
+            try:
+
+                matches = actions.user.move_image_relative(other_template_path,
+                                                           disambiguator=0,
+                                                           threshold=threshold,
+                                                           should_move_mouse=False,
+                                                           should_notify_message_if_fail=True)
+                print(f'has_match_images(): second try : matches={matches}')
+                return matches is not None
+            except RuntimeError as e:
+                raise_exception_if_not_matching_image_problem(e)
+                return False
 
     def click_to_that_image_down_way(template_path: str,
                                      disambiguator: Union[int, str] = 0,

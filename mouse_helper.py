@@ -295,7 +295,8 @@ class MouseActions:
             try:
                 result = f.result()
                 if result:
-                    logger.info(f'[mouse_helper]**********FINAL************ we exit before all futures '
+                    logger.info(f'[mouse_helper]**********FINAL************ we exit before all '
+                                f'futures '
                                 f'are '
                                 f'completed because a '
                                 f'matching was '
