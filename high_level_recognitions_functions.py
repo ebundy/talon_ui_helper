@@ -18,7 +18,9 @@ class UserActions:
     def has_match_images(template_path: str,
                          threshold: float,
                          other_template_path: str = None,
-                         gray_comparison: bool = False) -> bool:
+                         gray_comparison: bool = False,
+                         should_find_lower_than_position: bool = False,
+                         current_position: Tuple[int, int] = None) -> bool:
         """todo"""
         try:
             matches = actions.user.move_image_relative(template_path,
@@ -26,6 +28,8 @@ class UserActions:
                                                        threshold=threshold,
                                                        should_move_mouse=False,
                                                        gray_comparison=gray_comparison,
+                                                       should_find_lower_than_position=should_find_lower_than_position,
+                                                       current_position=current_position,
                                                        should_notify_message_if_fail=True)
             print(f'has_match_images(): first try : matches={matches}')
             return matches is not None
@@ -41,7 +45,10 @@ class UserActions:
                                                            disambiguator=0,
                                                            threshold=threshold,
                                                            should_move_mouse=False,
-                                                           should_notify_message_if_fail=True)
+                                                           should_notify_message_if_fail=True,
+                                                           should_find_lower_than_position=should_find_lower_than_position,
+                                                           current_position=current_position,
+                                                           )
                 print(f'has_match_images(): second try : matches={matches}')
                 return matches is not None
             except RuntimeError as e:

@@ -38,7 +38,7 @@ logger: logging.Logger = logging.getLogger('..talon_ui_helper.mouse_helper')
 level_name = logging.getLevelName(logger.level)
 logger.info(f'[mouse_helper]level_name={level_name}')
 print(f'level_name={level_name}')
-
+transaction_counter: int = 1
 mod = Module()
 setting_template_directory = mod.setting("mouse_helper_template_directory",
                                          type=str,
@@ -230,6 +230,9 @@ class MouseActions:
             create_gray_image_of_template(full_template_path)
         start = time.time()
         # print_screen_temporary_file_talon
+        global transaction_counter
+        transaction_id: str = str(transaction_counter) + f'_{template_path.replace("/", "_")}'
+        transaction_counter += 1
 
         try:
             matches = [MatchingRectangle(match.x + xoffset,
@@ -240,7 +243,7 @@ class MouseActions:
                        for match in template_matching_service.check_input_for_template(
                             print_screen_temporary_file_talon,
                             full_template_path,
-                            threshold).matching_rectangles]
+                            threshold, transaction_id).matching_rectangles]
         except Exception as e:
             if 'No matches for image' not in str(e):
                 logger.error('[mouse_helper][mouse_helper_find_template_relative]')
@@ -265,7 +268,9 @@ class MouseActions:
                                           gray_comparison: bool = False,
                                           region: Optional[TalonRect] = None,
                                           should_notify_message_if_fail: bool = False,
-                                          look_for_the_best_match: bool = False) -> bool:
+                                          should_find_lower_than_position: bool = False,
+                                          current_position: Tuple[int, int] = None,
+                                          ) -> bool:
         """todo"""
         # TODO For now the talon locate API doesn't provide the score of matches, so the best
         #  match feature is not still implementable
@@ -286,7 +291,9 @@ class MouseActions:
                                 gray_comparison,
                                 region,
                                 scale_tries_left=get_scale_tries_left_default(),
-                                should_notify_message_if_fail=should_notify_message_if_fail
+                                should_notify_message_if_fail=should_notify_message_if_fail,
+                                current_position=current_position,
+                                should_find_lower_than_position=should_find_lower_than_position
                                 ):
                     current_template
                 for current_template in template_paths}
@@ -316,6 +323,7 @@ class MouseActions:
                 if 'No matches for image' not in str(e):
                     logger.error('[mouse_helper]')
                     logger.error(traceback.format_exc())
+                    executor.shutdown(wait=False, cancel_futures=True)
 
         executor.shutdown(wait=False, cancel_futures=True)
 
@@ -409,6 +417,8 @@ class MouseActions:
                             gray_comparison: bool = False,
                             should_notify_message_if_fail: bool = True,
                             max_x_position: float = None,
+                            current_position: Tuple[int, int] = None,
+                            should_find_lower_than_position: bool = False,
                             ) -> bool:
         """todo"""
 
@@ -425,7 +435,10 @@ class MouseActions:
                                                                max_x_position=max_x_position,
                                                                scale_tries_left=get_scale_tries_left_default(),
                                                                should_notify_message_if_fail=should_notify_message_if_fail,
+                                                               current_position=current_position,
+                                                               should_find_lower_than_position=should_find_lower_than_position,
                                                                )
+
         if matching_rectangles:
             actions.sleep(0.5)
             actions.mouse_click(0)
@@ -433,6 +446,7 @@ class MouseActions:
 
         elif not matching_rectangles and should_notify_message_if_fail:
             # print('Blab blah labra')
+
             raise RuntimeError(f"No matches for image {template_path}")
 
         return False
@@ -443,7 +457,9 @@ class MouseActions:
                                          xoffset: int = 0,
                                          yoffset: int = 0,
                                          gray_comparison: bool = False,
-                                         region: Optional[TalonRect] = None):
+                                         region: Optional[TalonRect] = None,
+                                         current_position: Tuple[int, int] = None,
+                                         should_find_lower_than_position: bool = False):
         """todo"""
         print_screen = create_gray_image_of_print_screen() if gray_comparison else \
             create_image_of_print_screen()
@@ -457,7 +473,9 @@ class MouseActions:
                                          gray_comparison,
                                          region,
                                          scale_tries_left=get_scale_tries_left_default(),
-                                         should_notify_message_if_fail=True)
+                                         should_notify_message_if_fail=True,
+                                         current_position=current_position,
+                                         should_find_lower_than_position=should_find_lower_than_position)
         actions.sleep(0.5)
         actions.mouse_click(0)
         actions.sleep(0.5)
@@ -470,7 +488,8 @@ class MouseActions:
                                           xoffset: int = 0,
                                           yoffset: int = 0,
                                           gray_comparison: bool = False,
-                                          look_for_the_best_match: bool = False, ):
+                                          current_position: Tuple[int, int] = None,
+                                          should_find_lower_than_position: bool = False):
         """todo"""
         print_screen = create_gray_image_of_print_screen() if gray_comparison else \
             create_image_of_print_screen()
@@ -486,7 +505,8 @@ class MouseActions:
                                                                         yoffset,
                                                                         gray_comparison,
                                                                         None,
-                                                                        look_for_the_best_match)
+                                                                        current_position=current_position,
+                                                                        should_find_lower_than_position=should_find_lower_than_position)
         end = time.time()
         duration: float = end - start
         logger.info(f'[mouse_helper]FINAL:click_to_that_images_and_comeback() duration='
@@ -513,7 +533,9 @@ class MouseActions:
                              yoffset: int = 0,
                              gray_comparison: bool = False,
                              should_notify_message_if_fail: bool = False,
-                             look_for_the_best_match: bool = False) -> bool:
+                             should_find_lower_than_position: bool = False,
+                             current_position: Tuple[int, int] = None,
+                             ) -> bool:
         """todo"""
         print_screen = create_gray_image_of_print_screen() if gray_comparison else \
             create_image_of_print_screen()
@@ -526,7 +548,9 @@ class MouseActions:
                                                                         xoffset,
                                                                         yoffset,
                                                                         gray_comparison=gray_comparison,
-                                                                        should_notify_message_if_fail=should_notify_message_if_fail
+                                                                        should_notify_message_if_fail=should_notify_message_if_fail,
+                                                                        should_find_lower_than_position=should_find_lower_than_position,
+                                                                        current_position=current_position
                                                                         )
         end = time.time()
         duration: float = end - start
@@ -682,7 +706,9 @@ def mouse_helper_move_image_relative(template_path: str,
                 f'region={region}, threshold={threshold},gray_comparison={gray_comparison},'
                 f'scale_to_try={scale_to_try},scale_tries_left={scale_tries_left},'
                 f'print_screen_temporary_file_talon={print_screen_temporary_file_talon},'
-                f'should_notify_message_if_fail={should_notify_message_if_fail}'
+                f'should_notify_message_if_fail={should_notify_message_if_fail},'
+                f'current_position={current_position},'
+                f'should_find_lower_than_position={should_find_lower_than_position},'
                 f'max_x_position={max_x_position}'
                 )
 
@@ -691,6 +717,11 @@ def mouse_helper_move_image_relative(template_path: str,
     else:
         rect = region
 
+    if should_find_lower_than_position and not current_position:
+        message = 'The current_position argument is not valued and it is mandatory when ' \
+                  'should_find_lower_than_position is true'
+        actions.user.display_warning_message(message)
+        raise ValueError(message)
     if isinstance(disambiguator, str) and disambiguator not in ("mouse", "mouse_cycle"):
         message = 'The disambiguator parameter is a string but it doesn\'t have an allowed value'
         actions.user.display_warning_message(message)
