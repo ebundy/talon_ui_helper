@@ -66,7 +66,7 @@ class UserActions:
                                      max_x_position: float = None):
         """todo"""
         current_position: Tuple[int, int] = ctrl.mouse_pos()
-        # saved_mouse_pos = (actions.mouse_x(), actions.mouse_y())
+        # saved_mouse_pos = (actions.emouse_x(), actions.mouse_y())
         print(f'current_position={current_position}')
 
         should_find_lower_than_position = True

@@ -214,6 +214,11 @@ class MouseActions:
         else:
             rect = region
 
+        if not template_path:
+            message = 'The template_path parameter cannot be empty'
+            logger.error(f'{get_prefix_for_logging()}[mouse_helper_find_template_relative]' + message)
+            actions.user.display_warning_message(message)
+            raise ValueError(message)
         logger.info(f'{get_prefix_for_logging()}['
                     f'mouse_helper_find_template_relative]template_path={template_path}, '
                     f'gray_comparison='
@@ -270,6 +275,7 @@ class MouseActions:
                                           should_notify_message_if_fail: bool = False,
                                           should_find_lower_than_position: bool = False,
                                           current_position: Tuple[int, int] = None,
+                                          template_path_3: str = None,
                                           ) -> bool:
         """todo"""
         # TODO For now the talon locate API doesn't provide the score of matches, so the best
@@ -277,7 +283,13 @@ class MouseActions:
         # print_screen_temporary_file_talon: Image = None
         # if gray_comparison:
         #     print_screen_temporary_file_talon = create_gray_image_of_print_screen()
-        template_paths: Set[str] = {template_path, template_path_2}
+        template_paths: Set[str] = {template_path, template_path_2, template_path_3}
+        template_paths = {t for t in template_paths if t}
+        if len(template_paths) < 2:
+            message = 'We expect at least 2 templates'
+            logger.error('[mouse_helper]' + message)
+            actions.user.display_warning_message(message)
+            raise ValueError(message)
 
         executor: Executor = concurrent.futures.ThreadPoolExecutor(max_workers=5, )
         futures_by_template: Dict[Future, str] = {
@@ -291,7 +303,7 @@ class MouseActions:
                                 gray_comparison,
                                 region,
                                 scale_tries_left=get_scale_tries_left_default(),
-                                should_notify_message_if_fail=should_notify_message_if_fail,
+                                should_notify_message_if_fail=False,
                                 current_position=current_position,
                                 should_find_lower_than_position=should_find_lower_than_position
                                 ):
@@ -478,11 +490,12 @@ class MouseActions:
                                          should_find_lower_than_position=should_find_lower_than_position)
         actions.sleep(0.5)
         actions.mouse_click(0)
-        actions.sleep(0.5)
+        actions.sleep(0.8)
         actions.user.mouse_helper_position_restore()
 
     def click_to_that_images_and_comeback(template_path_one: str,
                                           template_path_two: str,
+                                          template_path_three: str,
                                           disambiguator: Union[int, str] = 0,
                                           threshold: float = 0.80,
                                           xoffset: int = 0,
@@ -506,33 +519,40 @@ class MouseActions:
                                                                         gray_comparison,
                                                                         None,
                                                                         current_position=current_position,
-                                                                        should_find_lower_than_position=should_find_lower_than_position)
+                                                                        should_find_lower_than_position=should_find_lower_than_position,
+                                                                        template_path_3=template_path_three
+                                                                        )
         end = time.time()
         duration: float = end - start
         logger.info(f'[mouse_helper]FINAL:click_to_that_images_and_comeback() duration='
                     f'{duration}. Images '
                     f'{template_path_one}, '
-                    f'{template_path_two}')
+                    f'{template_path_two},'
+                    f'{template_path_three}'
+                    )
+
         if duration >= 2:
             actions.user.display_warning_message(f'click_to_that_images_and_comeback() too l'
                                                  f'ong : {duration}s. '
-                                                 f'Images {template_path_one}, {template_path_two}')
+                                                 f'Images {template_path_one}, {template_path_two},'
+                                                 f'{template_path_three}')
 
         if not is_match:
             return
         actions.sleep(0.5)
         actions.mouse_click(0)
-        actions.sleep(0.5)
+        actions.sleep(0.8)
         actions.user.mouse_helper_position_restore()
 
     def click_to_that_images(template_path_one: str,
                              template_path_two: str,
+                             template_path_three: str,
                              disambiguator: Union[int, str] = 0,
                              threshold: float = 0.80,
                              xoffset: int = 0,
                              yoffset: int = 0,
                              gray_comparison: bool = False,
-                             should_notify_message_if_fail: bool = False,
+                             should_notify_message_if_fail: bool = True,
                              should_find_lower_than_position: bool = False,
                              current_position: Tuple[int, int] = None,
                              ) -> bool:
@@ -550,15 +570,18 @@ class MouseActions:
                                                                         gray_comparison=gray_comparison,
                                                                         should_notify_message_if_fail=should_notify_message_if_fail,
                                                                         should_find_lower_than_position=should_find_lower_than_position,
-                                                                        current_position=current_position
+                                                                        current_position=current_position,
+                                                                        template_path_3=template_path_three
                                                                         )
         end = time.time()
         duration: float = end - start
         logger.info(f'[mouse_helper] END:click_to_that_images() duration={duration}. Images '
-                    f'{template_path_one}, {template_path_two}, is_match={is_match}')
+                    f'{template_path_one}, {template_path_two}, {template_path_three},is_match='
+                    f'{is_match}')
         if duration >= 2:
             actions.user.display_warning_message(f'click_to_that_images() too long : {duration}s. '
-                                                 f'Images {template_path_one}, {template_path_two}')
+                                                 f'Images {template_path_one}, {template_path_two}, '
+                                                 f'{template_path_three}')
 
         if not is_match:
             return False
@@ -716,6 +739,12 @@ def mouse_helper_move_image_relative(template_path: str,
         rect = actions.user.mouse_helper_calculate_relative_rect("0 0 -0 -0", "active_screen")
     else:
         rect = region
+
+    if not template_path:
+        message = 'The template_path parameter cannot be empty'
+        logger.error(f'{get_prefix_for_logging()}[mouse_helper_move_image_relative]' + message)
+        actions.user.display_warning_message(message)
+        raise ValueError(message)
 
     if should_find_lower_than_position and not current_position:
         message = 'The current_position argument is not valued and it is mandatory when ' \
