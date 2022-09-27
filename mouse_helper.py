@@ -216,7 +216,8 @@ class MouseActions:
 
         if not template_path:
             message = 'The template_path parameter cannot be empty'
-            logger.error(f'{get_prefix_for_logging()}[mouse_helper_find_template_relative]' + message)
+            logger.error(f'{get_prefix_for_logging()}[mouse_helper_find_template_relative]' +
+                         message)
             actions.user.display_warning_message(message)
             raise ValueError(message)
         logger.info(f'{get_prefix_for_logging()}['
@@ -236,7 +237,9 @@ class MouseActions:
         start = time.time()
         # print_screen_temporary_file_talon
         global transaction_counter
-        transaction_id: str = str(transaction_counter) + f'_{template_path.replace("/", "_")}'
+        transaction_id: str = str(transaction_counter) + \
+                              template_path.replace("/", "_").replace("\\", "_").replace(':', '_')[
+                              -80:]
         transaction_counter += 1
 
         try:
@@ -421,8 +424,7 @@ class MouseActions:
 
         return matching
 
-    def click_to_that_image(template_path: str,
-                            disambiguator: Union[int, str] = 0,
+    def click_to_that_image(template_path: str, disambiguator: Union[int, str] = 0,
                             threshold: float = 0.80,
                             xoffset: int = 0,
                             yoffset: int = 0,
@@ -580,7 +582,8 @@ class MouseActions:
                     f'{is_match}')
         if duration >= 2:
             actions.user.display_warning_message(f'click_to_that_images() too long : {duration}s. '
-                                                 f'Images {template_path_one}, {template_path_two}, '
+                                                 f'Images {template_path_one}, '
+                                                 f'{template_path_two}, '
                                                  f'{template_path_three}')
 
         if not is_match:
