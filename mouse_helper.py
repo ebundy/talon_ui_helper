@@ -459,8 +459,6 @@ class MouseActions:
             return True
 
         elif not matching_rectangles and should_notify_message_if_fail:
-            # print('Blab blah labra')
-
             raise RuntimeError(f"No matches for image {template_path}")
 
         return False
