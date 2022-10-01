@@ -40,13 +40,6 @@ logger.info(f'[mouse_helper]level_name={level_name}')
 print(f'level_name={level_name}')
 transaction_counter: int = 1
 mod = Module()
-setting_template_directory = mod.setting("mouse_helper_template_directory",
-                                         type=str,
-                                         desc=("The folder that templated images are saved to."
-                                               " Defaults to image_templates in your user folder"),
-                                         default=None
-                                         # default=None
-                                         )
 
 
 def get_image_template_directory():
@@ -54,12 +47,13 @@ def get_image_template_directory():
     Gets the full path to the directory where template images are stored.
     """
 
-    maybe_value = setting_template_directory.get()
-    if maybe_value:
-        return maybe_value
-    else:
-        return os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                            ".." + os.sep + "image_templates")
+    # selected_website: str = website_templates_service.load_website_templates().selected_website
+    # if selected_website:
+    #     return selected_website
+    # else:
+    #     raise ValueError('selected_website was not defined in the json file')
+    return os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                        ".." + os.sep + "image_templates")
 
 
 def find_active_window_rect() -> TalonRect:

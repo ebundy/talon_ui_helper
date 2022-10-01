@@ -11,7 +11,7 @@ from talon import Module, Context, actions, ui, imgui
 # from mouse_helper import *
 from .mouse_helper import get_image_template_directory
 from .overlays import ImageSelectorOverlay, BlobBoxOverlay
-from ..knausj_talon.shared_settings_module import setting_template_sub_directory
+from ..knausj_talon.dave import website_templates_service
 
 mod = Module()
 mod.tag("command_wizard_showing", desc="The command wizard is showing")
@@ -29,9 +29,10 @@ def save_image_template(image):
         ".png"
 
     templates_directory = get_image_template_directory()
-    sub_directory = setting_template_sub_directory.get()
-    if sub_directory:
-        templates_directory = os.path.join(templates_directory, sub_directory)
+    # 
+    selected_website: str = website_templates_service.load_website_templates().selected_website
+    if selected_website:
+        templates_directory = os.path.join(templates_directory, selected_website)
 
     full_filename = os.path.join(templates_directory, unique_filename)
     print(f'full_filename={full_filename}')
@@ -51,7 +52,8 @@ def handle_image_click_builder(result):
         return
 
     filename = save_image_template(result["image"])
-    directory_output_without_templates_suffix: str = setting_template_sub_directory.get()
+    directory_output_without_templates_suffix: str = \
+        website_templates_service.load_website_templates().selected_website
     print(f'directory_output_without_templates_suffix={directory_output_without_templates_suffix}')
     index = result["index"]
 
@@ -137,7 +139,8 @@ command_wizards = [
                 ImageSelectorOverlay,
                 handle_image_click_builder,
                 (
-                        f'Output subdirectory: {setting_template_sub_directory.get()}\n\n'
+                        f'Output subdirectory: '
+                        f'{website_templates_service.load_website_templates().selected_website}\n\n'
                         "Select a region of the screen as an image to find in your voice command "
                         "then press enter to confirm your selection. Press escape to cancel.\n\n"
                         "After selecting and before enter, optionally right click to define an "
@@ -226,14 +229,14 @@ class CommandWizardActions:
     Actions related to the command builder wizard.
     """
 
-    def command_wizard_show():
+    def command_wizard_show():  # noqa
         """
         Brings up the command wizard UI
         """
 
         builder_picker_toggle(True)
 
-    def command_wizard_hide():
+    def command_wizard_hide():  # noqa# noqa
         """
         Closes the command wizard UI
         """
