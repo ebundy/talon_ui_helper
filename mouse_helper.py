@@ -16,6 +16,7 @@ import PIL
 from PIL import ImageGrab
 from PIL.Image import Resampling
 from talon import Module
+from talon import ctrl
 
 """
 Useful actions related to moving the mouse
@@ -304,7 +305,6 @@ class MouseActions:
                                 region,
                                 scale_tries_left=get_scale_tries_left_default(),
                                 should_notify_message_if_fail=False,
-                                current_position=current_position,
                                 should_find_lower_than_position=should_find_lower_than_position
                                 ):
                     current_template
@@ -371,7 +371,6 @@ class MouseActions:
                             region: Optional[TalonRect] = None,
                             should_move_mouse: bool = True,
                             should_notify_message_if_fail: bool = True,
-                            current_position: Tuple[int, int] = None,
                             should_find_lower_than_position: bool = False,
                             max_x_position: float = None,
                             ) -> MatchingRectangle:
@@ -409,7 +408,6 @@ class MouseActions:
                                                     region,
                                                     scale_tries_left=get_scale_tries_left_default(),
                                                     should_move_mouse=should_move_mouse,
-                                                    current_position=current_position,
                                                     should_find_lower_than_position=should_find_lower_than_position,
                                                     should_notify_message_if_fail=should_notify_message_if_fail,
                                                     max_x_position=max_x_position
@@ -429,7 +427,6 @@ class MouseActions:
                             gray_comparison: bool = False,
                             should_notify_message_if_fail: bool = True,
                             max_x_position: float = None,
-                            current_position: Tuple[int, int] = None,
                             should_find_lower_than_position: bool = False,
                             ) -> bool:
         """todo"""
@@ -447,7 +444,6 @@ class MouseActions:
                                                                max_x_position=max_x_position,
                                                                scale_tries_left=get_scale_tries_left_default(),
                                                                should_notify_message_if_fail=should_notify_message_if_fail,
-                                                               current_position=current_position,
                                                                should_find_lower_than_position=should_find_lower_than_position,
                                                                )
 
@@ -468,7 +464,6 @@ class MouseActions:
                                          yoffset: int = 0,
                                          gray_comparison: bool = False,
                                          region: Optional[TalonRect] = None,
-                                         current_position: Tuple[int, int] = None,
                                          should_find_lower_than_position: bool = False):
         """todo"""
         print_screen = create_gray_image_of_print_screen() if gray_comparison else \
@@ -484,7 +479,6 @@ class MouseActions:
                                          region,
                                          scale_tries_left=get_scale_tries_left_default(),
                                          should_notify_message_if_fail=True,
-                                         current_position=current_position,
                                          should_find_lower_than_position=should_find_lower_than_position)
         actions.sleep(0.5)
         actions.mouse_click(0)
@@ -499,7 +493,6 @@ class MouseActions:
                                           xoffset: int = 0,
                                           yoffset: int = 0,
                                           gray_comparison: bool = False,
-                                          current_position: Tuple[int, int] = None,
                                           should_find_lower_than_position: bool = False):
         """todo"""
         print_screen = create_gray_image_of_print_screen() if gray_comparison else \
@@ -516,7 +509,6 @@ class MouseActions:
                                                                         yoffset,
                                                                         gray_comparison,
                                                                         None,
-                                                                        current_position=current_position,
                                                                         should_find_lower_than_position=should_find_lower_than_position,
                                                                         template_path_3=template_path_three
                                                                         )
@@ -552,7 +544,6 @@ class MouseActions:
                              gray_comparison: bool = False,
                              should_notify_message_if_fail: bool = True,
                              should_find_lower_than_position: bool = False,
-                             current_position: Tuple[int, int] = None,
                              ) -> bool:
         """todo"""
         print_screen = create_gray_image_of_print_screen() if gray_comparison else \
@@ -568,7 +559,6 @@ class MouseActions:
                                                                         gray_comparison=gray_comparison,
                                                                         should_notify_message_if_fail=should_notify_message_if_fail,
                                                                         should_find_lower_than_position=should_find_lower_than_position,
-                                                                        current_position=current_position,
                                                                         template_path_3=template_path_three
                                                                         )
         end = time.time()
@@ -691,7 +681,6 @@ def mouse_helper_move_image_relative(template_path: str,
                                      scale_tries_left: List[float] = None,
                                      scale_to_try: float = 1,
                                      should_notify_message_if_fail=False,
-                                     current_position: Tuple[int, int] = None,
                                      should_find_lower_than_position: bool = False,
                                      max_x_position: float = None
                                      ) -> Union[List[MatchingRectangle], None, MatchingRectangle]:
@@ -719,6 +708,7 @@ def mouse_helper_move_image_relative(template_path: str,
     """
     # thread_name: str = threading.current_thread().getName()
 
+    current_position: Tuple[int, int] = ctrl.mouse_pos()
     logger.info(f'{get_prefix_for_logging()} [mouse_helper_move_image_relative] start '
                 f'with '
                 f'template_path='
@@ -738,17 +728,22 @@ def mouse_helper_move_image_relative(template_path: str,
     else:
         rect = region
 
+    if not current_position:
+        message = 'The current_position parameter cannot be empty'
+        logger.error(f'{get_prefix_for_logging()}[mouse_helper_move_image_relative]' + message)
+        actions.user.display_warning_message(message)
+        raise ValueError(message)
     if not template_path:
         message = 'The template_path parameter cannot be empty'
         logger.error(f'{get_prefix_for_logging()}[mouse_helper_move_image_relative]' + message)
         actions.user.display_warning_message(message)
         raise ValueError(message)
 
-    if should_find_lower_than_position and not current_position:
-        message = 'The current_position argument is not valued and it is mandatory when ' \
-                  'should_find_lower_than_position is true'
-        actions.user.display_warning_message(message)
-        raise ValueError(message)
+    # if should_find_lower_than_position:
+    #     message = 'The current_position argument is not valued and it is mandatory when ' \
+    #               'should_find_lower_than_position is true'
+    #     actions.user.display_warning_message(message)
+    #     raise ValueError(message)
     if isinstance(disambiguator, str) and disambiguator not in ("mouse", "mouse_cycle"):
         message = 'The disambiguator parameter is a string but it doesn\'t have an allowed value'
         actions.user.display_warning_message(message)
@@ -856,7 +851,6 @@ def mouse_helper_move_image_relative(template_path: str,
                                                 scale_tries_left,
                                                 scale_to_try,
                                                 should_notify_message_if_fail=should_notify_message_if_fail,
-                                                current_position=current_position,
                                                 should_find_lower_than_position=should_find_lower_than_position,
                                                 max_x_position=max_x_position
                                                 )
