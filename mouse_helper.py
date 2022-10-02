@@ -41,13 +41,6 @@ logger.info(f'[mouse_helper]level_name={level_name}')
 print(f'level_name={level_name}')
 transaction_counter: int = 1
 mod = Module()
-setting_template_directory = mod.setting("mouse_helper_template_directory",
-                                         type=str,
-                                         desc=("The folder that templated images are saved to."
-                                               " Defaults to image_templates in your user folder"),
-                                         default=None
-                                         # default=None
-                                         )
 
 
 def get_image_template_directory():
@@ -55,12 +48,13 @@ def get_image_template_directory():
     Gets the full path to the directory where template images are stored.
     """
 
-    maybe_value = setting_template_directory.get()
-    if maybe_value:
-        return maybe_value
-    else:
-        return os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                            ".." + os.sep + "image_templates")
+    # selected_website: str = website_templates_service.load_website_templates().selected_website
+    # if selected_website:
+    #     return selected_website
+    # else:
+    #     raise ValueError('selected_website was not defined in the json file')
+    return os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                        ".." + os.sep + "image_templates")
 
 
 def find_active_window_rect() -> TalonRect:
@@ -217,7 +211,8 @@ class MouseActions:
 
         if not template_path:
             message = 'The template_path parameter cannot be empty'
-            logger.error(f'{get_prefix_for_logging()}[mouse_helper_find_template_relative]' + message)
+            logger.error(f'{get_prefix_for_logging()}[mouse_helper_find_template_relative]' +
+                         message)
             actions.user.display_warning_message(message)
             raise ValueError(message)
         logger.info(f'{get_prefix_for_logging()}['
@@ -237,7 +232,9 @@ class MouseActions:
         start = time.time()
         # print_screen_temporary_file_talon
         global transaction_counter
-        transaction_id: str = str(transaction_counter) + f'_{template_path.replace("/", "_")}'
+        transaction_id: str = str(transaction_counter) + \
+                              template_path.replace("/", "_").replace("\\", "_").replace(':', '_')[
+                              -80:]
         transaction_counter += 1
 
         try:
@@ -419,8 +416,7 @@ class MouseActions:
 
         return matching
 
-    def click_to_that_image(template_path: str,
-                            disambiguator: Union[int, str] = 0,
+    def click_to_that_image(template_path: str, disambiguator: Union[int, str] = 0,
                             threshold: float = 0.80,
                             xoffset: int = 0,
                             yoffset: int = 0,
@@ -568,7 +564,8 @@ class MouseActions:
                     f'{is_match}')
         if duration >= 2:
             actions.user.display_warning_message(f'click_to_that_images() too long : {duration}s. '
-                                                 f'Images {template_path_one}, {template_path_two}, '
+                                                 f'Images {template_path_one}, '
+                                                 f'{template_path_two}, '
                                                  f'{template_path_three}')
 
         if not is_match:
