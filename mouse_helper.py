@@ -272,7 +272,6 @@ class MouseActions:
                                           region: Optional[TalonRect] = None,
                                           should_notify_message_if_fail: bool = False,
                                           should_find_lower_than_position: bool = False,
-                                          current_position: Tuple[int, int] = None,
                                           template_path_3: str = None,
                                           ) -> bool:
         """todo"""
