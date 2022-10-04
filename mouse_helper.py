@@ -100,7 +100,8 @@ saved_mouse_pos = None
 
 
 def get_scale_tries_left_default() -> List[float]:
-    return [0.9, 1.1, 1.2, 0.8]
+    # return [0.9, 1.1, 1.2, 0.8]
+    return []
 
 
 @mod.action_class

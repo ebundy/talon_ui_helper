@@ -138,6 +138,7 @@ command_wizards = [
                 "Click a single image on the screen",
                 ImageSelectorOverlay,
                 handle_image_click_builder,
+                lambda:
                 (
                         f'Output subdirectory: '
                         f'{website_templates_service.load_website_templates().selected_website}\n\n'
@@ -196,7 +197,7 @@ def open_overlay(index):
 
     # print(f'command_wizards[index]={command_wizards[index]}')
     _, overlay, handler, help = command_wizards[index]
-    existing_overlay = overlay(handler, text=help)
+    existing_overlay = overlay(handler, text=help())
 
 
 @imgui.open(y=0)
