@@ -735,6 +735,12 @@ def mouse_helper_move_image_relative(template_path: str,
         logger.error(f'{get_prefix_for_logging()}[mouse_helper_move_image_relative]' + message)
         actions.user.display_warning_message(message)
         raise ValueError(message)
+    template_path_temp = Path(get_image_template_directory()) / template_path
+    if not template_path_temp.exists():
+        message = f'No existing file for path : {template_path}'
+        logger.error(f'{get_prefix_for_logging()}[mouse_helper_move_image_relative]' + message)
+        actions.user.display_warning_message(message)
+        raise ValueError(message)
 
     # if should_find_lower_than_position:
     #     message = 'The current_position argument is not valued and it is mandatory when ' \
