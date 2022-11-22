@@ -540,6 +540,7 @@ class MouseActions:
                              gray_comparison: bool = False,
                              should_notify_message_if_fail: bool = True,
                              should_find_lower_than_position: bool = False,
+                             should_click: bool = True
                              ) -> bool:
         """todo"""
         print_screen = create_gray_image_of_print_screen() if gray_comparison else \
@@ -571,7 +572,8 @@ class MouseActions:
         if not is_match:
             return False
         actions.sleep(0.5)
-        actions.mouse_click(0)
+        if should_click:
+            actions.mouse_click(0)
         return True
 
 
@@ -787,7 +789,7 @@ def mouse_helper_move_image_relative(template_path: str,
         sorted_matches = [s for s in sorted_matches if s.x <= max_x_position]
         logger.info(f' sorted_matches after max_x_position filtering={sorted_matches}')
         # return
-    if len(sorted_matches) > 15:
+    if len(sorted_matches) > 18:
         message: str = f'we have too many matching ({len(sorted_matches)})for ' \
                        f'the ' \
                        f'' \
