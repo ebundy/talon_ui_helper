@@ -81,7 +81,7 @@ class UserActions:
             if is_move:
                 actions.sleep(0.5)
                 actions.mouse_click(0)
-                return
+                return is_move
             else:
                 # raise_exception_if_not_matching_image_problem(e)
                 actions.user.mouse_scroll_down(scroll_down_amount)
